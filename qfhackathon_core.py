@@ -494,26 +494,10 @@ def run_local(args):
 
 
 def run_demo(args):
-    print("\n  QUANTUM CARBON HEDGE")
+    print("\n  ANTIPODE")
     print("  ─────────────────────────────────────────────")
-    print("  A local QAOA portfolio demo with a classical reference.\n")
-
-    metadata_path = DATA_DIR / "metadata.csv"
-    returns_path = DATA_DIR / "returns.csv"
-    if not metadata_path.is_file() or not returns_path.is_file():
-        print("  01 / MARKET DATA")
-        print("  No local dataset found; downloading the default Yahoo Finance window.")
-        download(args.start)
-    else:
-        print("  01 / MARKET DATA")
-        print("  Bundled local dataset ready.")
-
-    print(
-        f"\n  02 / PORTFOLIO SOLVE · {args.n} assets · "
-        f"{args.k} per leg · {args.shots} shots"
-    )
-    run_local(args)
-
+    print("  Dashboard-first portfolio research demo.")
+    print("  Generate market data and run either solver from the browser.\n")
     from dashboard_server import create_server
 
     with create_server(
@@ -522,11 +506,13 @@ def run_demo(args):
         k=args.k,
         shots=args.shots,
         steps=args.steps,
+        start_fresh=True,
+        dataset_start=args.start,
     ) as server:
         url = f"http://{server.server_address[0]}:{server.server_address[1]}"
-        print("\n  03 / PRESENTATION DASHBOARD")
+        print("  PRESENTATION DASHBOARD")
         print(f"  {url}")
-        print("  Click “Run local QAOA” to sample another portfolio.")
+        print("  Start with “Generate futures dataset” in the dashboard.")
         print("  Press Ctrl+C to stop the demo.\n")
         if not args.no_browser:
             webbrowser.open(url)
@@ -773,7 +759,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     demo_parser = sub.add_parser(
         "demo",
-        help="solve a sample portfolio, then open the presentation dashboard",
+        help="open the dashboard-first demo",
     )
     demo_parser.add_argument("--n", type=int, default=DEMO_ASSETS)
     demo_parser.add_argument("--k", type=int, default=DEMO_K)
@@ -782,6 +768,17 @@ def main():
     demo_parser.add_argument("--start", default="2018-01-01")
     demo_parser.add_argument("--port", type=int, default=8765)
     demo_parser.add_argument("--no-browser", action="store_true")
+    dashboard_parser = sub.add_parser(
+        "dashboard",
+        help="open the dashboard without precomputing a portfolio",
+    )
+    dashboard_parser.add_argument("--n", type=int, default=DEMO_ASSETS)
+    dashboard_parser.add_argument("--k", type=int, default=DEMO_K)
+    dashboard_parser.add_argument("--shots", type=int, default=DEMO_SHOTS)
+    dashboard_parser.add_argument("--steps", type=int, default=DEMO_STEPS)
+    dashboard_parser.add_argument("--start", default="2018-01-01")
+    dashboard_parser.add_argument("--port", type=int, default=8765)
+    dashboard_parser.add_argument("--no-browser", action="store_true")
     download_parser = sub.add_parser("download")
     download_parser.add_argument("--start", default="2018-01-01")
     download_parser.add_argument("--end")
@@ -826,6 +823,8 @@ def main():
     args = parser.parse_args()
     configure_logging(args.verbose)
     if args.command == "demo":
+        run_demo(args)
+    elif args.command == "dashboard":
         run_demo(args)
     elif args.command == "download":
         download(args.start, args.end)

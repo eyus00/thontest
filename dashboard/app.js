@@ -19,6 +19,12 @@ const runMessages = {
     'Sampling on IQM hardware',
     'Decoding the returned samples',
   ],
+  dataset: [
+    'Connecting to Yahoo Finance',
+    'Downloading historical futures',
+    'Cleaning prices and returns',
+    'Preparing dashboard dataset',
+  ],
 };
 
 function formatNumber(value, digits = 0) {
@@ -82,7 +88,7 @@ function render(state) {
   const shots = Number(result.total_shots ?? 0);
   const feasible = Number(result.feasible_probability ?? 0);
   const hardwareRun = (result.source || '').includes('IQM');
-  datasetAvailable = assets > 0;
+  datasetAvailable = Boolean(state.dataset_available ?? assets > 0);
 
   $('#executionMode').textContent = hardwareRun ? 'IQM HARDWARE RESULT' : 'LOCAL DEMO';
   $('#sourceTag').textContent = result.source || state.source || 'LOCAL PORTFOLIO DEMO';
@@ -91,6 +97,9 @@ function render(state) {
   $('#orbitQubits').textContent = `${formatNumber(qubits)} qubits`;
   $('#shots').textContent = shots ? formatNumber(shots) : '—';
   $('#backend').textContent = hardwareRun ? (result.source.match(/IQM\s+([A-Z]+)/)?.[1] || 'IQM') : 'LOCAL QRISP';
+  $('#datasetStart').hidden = datasetAvailable;
+  $('#solverActions').hidden = !datasetAvailable;
+  $('#generateDatasetButton').disabled = runInProgress;
   $('#runButton').disabled = runInProgress || assets <= 0;
   $('#openResonanceSettings').disabled = runInProgress || assets <= 0;
 
@@ -118,17 +127,21 @@ function render(state) {
   const carbon = Number(best?.net_carbon ?? 0);
   const grossCarbon = Math.max(0, Number(best?.gross_carbon ?? Math.abs(carbon)));
   const sign = carbon > 0 ? '+' : carbon < 0 ? '−' : '';
-  $('#netCarbon').innerHTML = `${sign}${formatNumber(Math.abs(carbon))}<span> kg CO₂</span>`;
-  $('#carbonMeterNegative').textContent = `−${formatNumber(grossCarbon)} kg`;
-  $('#carbonMeterPositive').textContent = `+${formatNumber(grossCarbon)} kg`;
-  const fraction = grossCarbon > 0 ? Math.max(-1, Math.min(1, carbon / grossCarbon)) : 0;
+  $('#netCarbon').innerHTML = best
+    ? `${sign}${formatNumber(Math.abs(carbon))}<span> kg CO₂</span>`
+    : '—<span> kg CO₂</span>';
+  $('#carbonMeterNegative').textContent = best ? `−${formatNumber(grossCarbon)} kg` : '—';
+  $('#carbonMeterPositive').textContent = best ? `+${formatNumber(grossCarbon)} kg` : '—';
+  const fraction = best && grossCarbon > 0 ? Math.max(-1, Math.min(1, carbon / grossCarbon)) : 0;
   const fill = $('#carbonMeterFill');
   fill.style.left = `${50 + Math.min(fraction, 0) * 50}%`;
   fill.style.width = `${Math.abs(fraction) * 50}%`;
   fill.classList.toggle('positive', fraction > 0);
-  $('#carbonMeterCaption').textContent = `Net exposure is ${Math.abs(fraction * 100).toFixed(1)}% of gross financed exposure`;
+  $('#carbonMeterCaption').textContent = best
+    ? `Net exposure is ${Math.abs(fraction * 100).toFixed(1)}% of gross financed exposure`
+    : 'Exposure values appear after a portfolio run';
 
-  $('#feasibleRate').innerHTML = `${(feasible * 100).toFixed(1)}<span>%</span>`;
+  $('#feasibleRate').innerHTML = best ? `${(feasible * 100).toFixed(1)}<span>%</span>` : '—<span>%</span>';
   $('.validity-panel .bar-rows b i').style.width = `${Math.max(feasible * 100, 1)}%`;
   $('.validity-panel .bar-rows .pale i').style.width = `${Math.max((1 - feasible) * 100, 1)}%`;
 
@@ -145,10 +158,49 @@ function render(state) {
   }
 
   $('#runStatus').textContent = assets <= 0
-    ? 'Dataset missing. Start with “python qfhackathon.py demo” in Terminal.'
+    ? ''
     : best
       ? `${formatNumber(assets)} assets · ${formatNumber(qubits)} qubits · ${formatNumber(shots)} shots`
       : 'Ready to run the portfolio solver';
+}
+
+async function generateDataset() {
+  if (runInProgress) return;
+  runInProgress = true;
+  const button = $('#generateDatasetButton');
+  button.disabled = true;
+  button.setAttribute('aria-busy', 'true');
+  button.textContent = 'Generating futures data…';
+  $('#runStatus').textContent = 'Downloading and preparing historical futures data.';
+  try {
+    startRunVisual('dataset');
+    const response = await fetch('/api/generate-dataset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.output || 'Could not generate the futures dataset.');
+    }
+    render(payload.state);
+    $('#runStatus').textContent = datasetAvailable
+      ? `Dataset ready · ${formatNumber(payload.state.asset_count)} futures available. Choose a run method.`
+      : 'Dataset download completed, but the data is incomplete. Please retry.';
+  } catch (error) {
+    $('#runStatus').textContent = error instanceof Error ? error.message : 'Could not generate the futures dataset.';
+  } finally {
+    try {
+      stopRunVisual();
+    } finally {
+      runInProgress = false;
+      button.removeAttribute('aria-busy');
+      button.disabled = false;
+      button.textContent = 'Generate futures dataset';
+      $('#runButton').disabled = !datasetAvailable;
+      $('#openResonanceSettings').disabled = !datasetAvailable;
+    }
+  }
 }
 
 async function runPortfolio(kind) {
@@ -250,7 +302,12 @@ function startRunVisual(kind) {
   $('#runVisualOverlay').append(clone);
   clone.getBoundingClientRect();
   overlay.classList.add('is-active');
-  $('#runVisualMode').textContent = kind === 'local' ? 'LOCAL QAOA SIMULATION' : 'IQM RESONANCE HARDWARE';
+  $('#runVisualMode').textContent = kind === 'local'
+    ? 'LOCAL QAOA SIMULATION'
+    : kind === 'resonance' ? 'IQM RESONANCE HARDWARE' : 'MARKET DATA';
+  $('#runVisualTitle').textContent = kind === 'dataset'
+    ? 'Preparing the futures dataset'
+    : kind === 'local' ? 'Finding a balanced portfolio' : 'Preparing and sampling on IQM';
   const messages = runMessages[kind];
   let messageIndex = 0;
   showRunMessage(messages[messageIndex]);
@@ -306,6 +363,7 @@ function stopRunVisual() {
 }
 
 $('#settingAssets').addEventListener('change', syncPortfolioSettings);
+$('#generateDatasetButton').addEventListener('click', generateDataset);
 $('#runButton').addEventListener('click', () => runPortfolio('local'));
 $('#openResonanceSettings').addEventListener('click', () => $('#resonanceDialog').showModal());
 $('#runResonanceButton').addEventListener('click', () => {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import date
 import errno
 import json
 import subprocess
@@ -30,8 +31,15 @@ class DashboardHTTPServer(ThreadingHTTPServer):
         server_address,
         request_handler_class,
         run_options: dict[str, int | str],
+        *,
+        start_fresh: bool = False,
+        dataset_start: str = "2018-01-01",
     ) -> None:
         self.run_options = run_options
+        self.start_fresh = start_fresh
+        self.dataset_start = dataset_start
+        self.has_generated_dataset = False
+        self.has_completed_run = False
         super().__init__(server_address, request_handler_class)
 
 
@@ -42,14 +50,16 @@ def read_json(path: Path, default):
         return default
 
 
-def state() -> dict:
+def state(*, include_saved_result: bool = True) -> dict:
     metadata_path = DATA_DIR / "metadata.csv"
+    returns_path = DATA_DIR / "returns.csv"
     if metadata_path.is_file():
         with metadata_path.open(newline="", encoding="utf-8") as metadata_file:
             metadata = list(csv.DictReader(metadata_file))
     else:
         metadata = []
-    result = read_json(RESULT_PATH, {})
+    dataset_available = returns_path.is_file() and len(metadata) >= 2
+    result = read_json(RESULT_PATH, {}) if dataset_available and include_saved_result else {}
 
     best = result.get("best_feasible") or {}
     bitstring = best.get("bitstring", "")
@@ -66,7 +76,7 @@ def state() -> dict:
         result.get("asset_count")
         or len(result.get("universe", []))
         or (len(bitstring) // 2 if bitstring else 0)
-        or min(DEMO_ASSETS, len(metadata))
+        or (min(DEMO_ASSETS, len(metadata)) if dataset_available else 0)
     )
     ticker_to_name = {row["ticker"]: row["name"] for row in metadata}
     selected = result.get("universe") or [
@@ -106,6 +116,7 @@ def state() -> dict:
         "source": result.get("source", "YAHOO / STANDALONE DATASET" if assets else "NO DATASET"),
         "asset_count": asset_count,
         "qubit_count": result.get("qubit_count", asset_count * 2),
+        "dataset_available": dataset_available,
     }
 
 
@@ -121,7 +132,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/state":
-            self._send(200, json.dumps(state()).encode(), "application/json")
+            include_saved = (
+                (not self.server.start_fresh and not self.server.has_generated_dataset)
+                or self.server.has_completed_run
+            )
+            self._send(200, json.dumps(state(include_saved_result=include_saved)).encode(), "application/json")
             return
         if path == "/":
             path = "/index.html"
@@ -138,18 +153,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlparse(self.path).path
-        if endpoint not in {"/api/run-local", "/api/run-resonance"}:
+        if endpoint not in {"/api/generate-dataset", "/api/run-local", "/api/run-resonance"}:
             self._send(404, b"Not found", "text/plain; charset=utf-8")
             return
-        try:
-            options = self._run_options()
-        except (ValueError, UnicodeDecodeError) as error:
-            self._send(
-                400,
-                json.dumps({"ok": False, "output": str(error)}).encode(),
-                "application/json",
-            )
-            return
+
+        if endpoint == "/api/generate-dataset":
+            try:
+                command = self._dataset_command()
+            except (ValueError, UnicodeDecodeError) as error:
+                self._send(
+                    400,
+                    json.dumps({"ok": False, "output": str(error)}).encode(),
+                    "application/json",
+                )
+                return
+        else:
+            try:
+                options = self._run_options()
+            except (ValueError, UnicodeDecodeError) as error:
+                self._send(
+                    400,
+                    json.dumps({"ok": False, "output": str(error)}).encode(),
+                    "application/json",
+                )
+                return
 
         if endpoint == "/api/run-local":
             command = [
@@ -175,9 +202,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "--backend", str(options["backend"]),
                 "--yes",
             ]
-        else:
-            self._send(404, b"Not found", "text/plain; charset=utf-8")
-            return
 
         if not RUN_LOCK.acquire(blocking=False):
             self._send(
@@ -193,10 +217,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 timeout=3600, check=False,
             )
             output = process.stdout + process.stderr
+            if process.returncode == 0:
+                if endpoint == "/api/generate-dataset":
+                    self.server.has_generated_dataset = True
+                    self.server.has_completed_run = False
+                else:
+                    self.server.has_completed_run = True
+            include_saved = (
+                (not self.server.start_fresh and not self.server.has_generated_dataset)
+                or self.server.has_completed_run
+            )
             payload = {
                 "ok": process.returncode == 0,
                 "output": "" if process.returncode == 0 else output[-2500:],
-                "state": state() if process.returncode == 0 else None,
+                "state": state(include_saved_result=include_saved) if process.returncode == 0 else None,
             }
             self._send(
                 200 if process.returncode == 0 else 500,
@@ -217,6 +251,30 @@ class DashboardHandler(BaseHTTPRequestHandler):
             )
         finally:
             RUN_LOCK.release()
+
+    def _dataset_command(self) -> list[str]:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ValueError("Invalid request content length.") from error
+        if not 0 <= content_length <= 2048:
+            raise ValueError("Dataset request is too large.")
+        payload = json.loads(self.rfile.read(content_length) or b"{}")
+        if not isinstance(payload, dict) or payload.keys() - {"start"}:
+            raise ValueError("Dataset request must contain only a start date.")
+        start = payload.get("start", self.server.dataset_start)
+        if not isinstance(start, str):
+            raise ValueError("Dataset start date must be YYYY-MM-DD.")
+        try:
+            parsed_start = date.fromisoformat(start)
+        except ValueError as error:
+            raise ValueError("Dataset start date must be YYYY-MM-DD.") from error
+        if parsed_start.isoformat() != start:
+            raise ValueError("Dataset start date must be YYYY-MM-DD.")
+        return [
+            sys.executable, str(ROOT / "qfhackathon.py"), "download",
+            "--start", start,
+        ]
 
     def _run_options(self) -> dict[str, int | str | bool]:
         try:
@@ -243,8 +301,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             "confirmed": payload.get("confirmed", False),
         }
         metadata_path = DATA_DIR / "metadata.csv"
-        if not metadata_path.is_file():
-            raise ValueError("Dataset is missing. Start with “python qfhackathon.py demo” first.")
+        if not metadata_path.is_file() or not (DATA_DIR / "returns.csv").is_file():
+            raise ValueError("Generate the futures dataset from the dashboard first.")
         with metadata_path.open(newline="", encoding="utf-8") as metadata_file:
             available_assets = sum(1 for _ in csv.DictReader(metadata_file))
         integer_limits = {
@@ -275,18 +333,27 @@ def create_server(
     k: int = DEMO_K,
     shots: int = 256,
     steps: int = 20,
+    *,
+    start_fresh: bool = False,
+    dataset_start: str = "2018-01-01",
 ) -> DashboardHTTPServer:
     run_options = {
         "n": n, "k": k, "shots": shots, "steps": steps, "reps": 1,
         "backend": "garnet",
     }
     try:
-        return DashboardHTTPServer(("127.0.0.1", port), DashboardHandler, run_options)
+        return DashboardHTTPServer(
+            ("127.0.0.1", port), DashboardHandler, run_options,
+            start_fresh=start_fresh, dataset_start=dataset_start,
+        )
     except OSError as error:
         if error.errno != errno.EADDRINUSE or port == 0:
             raise
         print(f"Port {port} is already in use; selecting an available port.")
-        return DashboardHTTPServer(("127.0.0.1", 0), DashboardHandler, run_options)
+        return DashboardHTTPServer(
+            ("127.0.0.1", 0), DashboardHandler, run_options,
+            start_fresh=start_fresh, dataset_start=dataset_start,
+        )
 
 
 if __name__ == "__main__":

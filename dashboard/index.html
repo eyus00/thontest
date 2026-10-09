@@ -33,11 +33,15 @@
           <p class="kicker">Carbon-aware hedge discovery</p>
           <h1>Find the hedge<br><em>inside the energy curve.</em></h1>
           <p class="hero-text">A small QAOA experiment for long/short energy-futures selection, with a classical reference and an honest continuous-balance certificate.</p>
-          <div class="hero-actions">
+          <div class="dataset-start" id="datasetStart" hidden>
+            <p>No market dataset is ready. Generate the historical futures data to begin the demo.</p>
+            <button class="primary-button" id="generateDatasetButton" type="button">Generate futures dataset</button>
+          </div>
+          <div class="hero-actions" id="solverActions" hidden>
             <button class="primary-button" id="runButton" type="button" disabled><span class="button-label">Run local QAOA</span></button>
             <button class="primary-button resonance-button" id="openResonanceSettings" type="button" disabled>Run on Resonance</button>
           </div>
-          <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading saved portfolio…</span>
+          <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading dashboard…</span>
           <dialog class="settings-dialog" id="resonanceDialog" aria-labelledby="resonanceDialogTitle">
             <form method="dialog" id="resonanceSettingsForm">
               <div class="dialog-heading">

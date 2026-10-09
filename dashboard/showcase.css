@@ -5,6 +5,9 @@
 .hero-orbit{align-self:start;margin-top:20px}
 .hero h1{font-size:clamp(42px,5vw,68px)}
 .hero-text{margin:18px 0 22px}
+.dataset-start{max-width:480px;margin:22px 0 10px;padding:15px;border:1px solid var(--line);background:rgba(251,250,245,.72)}
+.dataset-start[hidden],.hero-actions[hidden]{display:none}
+.dataset-start p{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.5}
 .hero-actions{gap:10px;flex-wrap:wrap;align-items:stretch}
 .run-status{display:block;min-height:18px;margin-top:12px}
 .settings-dialog{width:min(540px,calc(100vw - 32px));max-height:min(90vh,720px);padding:25px;border:1px solid var(--line);background:var(--panel);color:var(--ink);box-shadow:0 28px 90px rgba(24,36,43,.25)}

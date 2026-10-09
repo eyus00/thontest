@@ -1,11 +1,11 @@
-# QFHackathon — Carbon-Aware Futures Hedging with QAOA
+# Antipode — Carbon-Aware Futures Hedging with QAOA
 
 A self-contained pipeline that uses historical Yahoo Finance futures data, turns a **carbon-aware long/short portfolio selection** problem into a **QUBO / Ising** model, and solves it classically and with local QAOA:
 
 1. **Exact classical brute force** (the ground-truth reference),
 2. **Local QAOA simulation** with [Qrisp](https://qrisp.eu).
 
-Use `python qfhackathon.py demo` for the guided demo: it checks local data, runs the solver, prints the portfolio summary, and opens the focused presentation dashboard. IQM Resonance remains available as a separate specialist CLI workflow.
+Use `python qfhackathon.py demo` (or `python qfhackathon.py dashboard`) to open the Antipode dashboard. The dashboard starts without solving a portfolio: if the data is missing, choose **Generate futures dataset** in the page, then run local QAOA or configure an IQM Resonance run. This keeps every demonstration step visible and avoids pre-filled results from an earlier run.
 
 ---
 
@@ -154,9 +154,9 @@ Verify the install:
 python qfhackathon.py --help
 ```
 
-You should see the subcommands `demo, download, classical, local, run, resonance, compare, reset`.
+You should see the subcommands `demo, dashboard, download, classical, local, run, resonance, compare, reset`.
 
-The repo **ships with a sample dataset** (2018-01-03 → 2026-10-09, 15 futures, 2,207 daily returns) in `data/`, so you can run `classical`, `local` and the dashboard immediately without downloading anything.
+The repository may include a bundled dataset in `data/`. Use `reset` to remove generated files and saved results; the dashboard can then build a fresh dataset when you start the demo.
 
 ---
 
@@ -166,15 +166,22 @@ The repo **ships with a sample dataset** (2018-01-03 → 2026-10-09, 15 futures,
 python qfhackathon.py demo
 ```
 
-The guided demo uses the bundled dataset when present. If it is absent, it downloads the default Yahoo Finance window, then runs the exact classical reference and local QAOA before opening the dashboard. The dashboard has one primary action: **Run local QAOA**.
+The dashboard-first demo opens without running either solver or displaying an old saved portfolio. If data is unavailable, select **Generate futures dataset** in the dashboard. When it is ready, choose **Run local QAOA** or **Run on Resonance**.
 
-Options allow a smaller/faster presentation run, or prevent automatic browser launch:
+Options set the run defaults and data range, or prevent automatic browser launch:
 
 ```bash
 python qfhackathon.py demo --n 6 --k 2 --shots 128 --steps 8 --no-browser
 ```
 
-Use `Ctrl+C` in the terminal to stop the server. No packages are installed automatically when starting the app; dependency setup is a separate one-time environment step.
+To reset and start with no cached dataset or portfolio:
+
+```bash
+python qfhackathon.py reset --yes
+python qfhackathon.py demo
+```
+
+Then click **Generate futures dataset** in the browser. Use `python qfhackathon.py dashboard` as an equivalent dashboard-only command. Use `Ctrl+C` in the terminal to stop the server. No packages are installed automatically when starting the app; dependency setup is a separate one-time environment step.
 
 For a focused CLI-only run, use:
 
@@ -200,13 +207,14 @@ python qfhackathon.py [--verbose] <command> [command options]
 
 Long-running stages show an animated terminal spinner when attached to an interactive terminal, and simple progress lines when output is piped. The app does not install or update packages automatically.
 
-### `demo` — guided solve and presentation dashboard
+### `demo` / `dashboard` — open the dashboard-first demo
 
 ```bash
 python qfhackathon.py demo [--n N] [--k K] [--shots S] [--steps T] [--start DATE] [--port P] [--no-browser]
+python qfhackathon.py dashboard [--n N] [--k K] [--shots S] [--steps T] [--start DATE] [--port P] [--no-browser]
 ```
 
-Runs the exact classical reference, local QAOA and numerical Hobby–Rice balance certificate, then serves the dashboard and opens it in a browser. The default demo uses 8 assets, 2 long and 2 short positions, 256 shots and 20 QAOA optimizer steps. If the local dataset is missing, it fetches the default date range before solving. Press `Ctrl+C` to stop the server.
+Starts a clean dashboard session without downloading data or precomputing a portfolio. If no dataset is present, the page offers **Generate futures dataset**; after download, choose local QAOA or open the Resonance settings. Defaults are 8 assets, 2 positions per leg, 256 shots and 20 optimizer steps for local runs. The `--start` date is used if the dashboard generates data. Press `Ctrl+C` to stop the server.
 
 ---
 
@@ -380,7 +388,9 @@ python dashboard_server.py
 
 The server binds only to `127.0.0.1` (local machine), has no authentication, and reads only this folder's `data/`.
 
-The Antipode dashboard has two separate run actions:
+The Antipode dashboard starts with no computed portfolio for each `demo`/`dashboard` session, even when an older saved result exists. If the data files are absent, use **Generate futures dataset** in the page; it downloads Yahoo futures history and enables the run actions once valid data is ready. This also works after `python qfhackathon.py reset --yes`. No solver runs before you ask it to.
+
+The dashboard has two separate run actions:
 
 - **Run local QAOA** runs the Qrisp-based simulation on your computer. It does not use IQM hardware. The local optimizer uses the demo's default settings.
 - **Run on Resonance** opens a settings dialog for futures count, positions per leg, shots, hardware layers, and IQM model. When submitted, the app prepares the problem and circuit on your computer, sends the circuit to the selected IQM backend for quantum sampling, then decodes and displays the returned samples. This is not a locally solved portfolio being sent to IQM. The hardware circuit currently uses fixed initial angles and a Qiskit circuit path that differs from the local Qrisp simulation.
@@ -395,6 +405,7 @@ The objective meter shows the carbon and covariance contributions for the select
 |---|---|
 | `GET /` and static files | Files from `dashboard/` (`.html`, `.css`, `.js` only get proper content types; path traversal outside `dashboard/` is blocked) |
 | `GET /api/state` | JSON: selected-run `model`, `result`, `source`, `asset_count`, `qubit_count` |
+| `POST /api/generate-dataset` | Generates the default Yahoo dataset (or the dashboard's configured `--start` date); returns `{ok, output, state}` |
 | `POST /api/run-local` | JSON body: `{n, k, shots, steps}`; returns `{ok, output, state}` |
 | `POST /api/run-resonance` | JSON body: `{n, k, shots, reps, backend, confirmed}`; requires `confirmed: true`; returns `{ok, output, state}` |
 
