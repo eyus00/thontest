@@ -4,7 +4,7 @@
 .hero h1{font-size:clamp(42px,5vw,68px)}
 .hero-text{margin:18px 0 22px}
 .hero-actions{gap:16px;flex-wrap:wrap}
-.primary-button{min-width:190px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:4px;padding:14px 20px;box-shadow:0 8px 20px rgba(24,36,43,.12)}
+.primary-button{min-width:190px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:0;padding:14px 20px;box-shadow:0 8px 20px rgba(24,36,43,.12)}
 .primary-button:hover{transform:translateY(-1px)}
 .primary-button:disabled{opacity:.75;cursor:progress;transform:none}
 .button-icon{color:var(--lime);margin:0!important}
@@ -15,7 +15,9 @@
 .section-heading{margin:48px 0 20px}
 .portfolio-grid{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 240px;gap:12px}
 .portfolio-card{min-height:176px;padding:20px}
-.leg-title{font-size:clamp(18px,2vw,26px);line-height:1.15;overflow-wrap:anywhere}
+.leg-title{display:grid;gap:7px;font-size:clamp(18px,2vw,26px);line-height:1.15;overflow-wrap:anywhere}
+.asset-line{display:block;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.asset-line:last-child{padding-bottom:0;border-bottom:0}
 .score-card{padding:20px}
 .score-card strong{font-size:clamp(30px,3.3vw,42px);overflow-wrap:anywhere}
 .metrics-grid{grid-template-columns:1.15fr 1fr .85fr;gap:12px;margin-top:12px}
@@ -65,7 +67,7 @@ footer{margin-top:26px;padding:18px 0 22px;border-top:1px solid var(--line);disp
   .section-heading h2{font-size:25px}
   .portfolio-grid{grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:7px}
   .portfolio-card{min-height:158px;padding:13px}
-  .leg-title{font-size:16px;letter-spacing:-.06em}
+  .leg-title{gap:6px;font-size:16px;letter-spacing:-.06em}
   .leg-pill,.leg-index,.leg-foot{font-size:8px}
   .swap-mark{font-size:16px}
   .score-card{grid-column:1/-1;min-height:120px}

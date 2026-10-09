@@ -4,6 +4,21 @@ function formatNumber(value, digits = 0) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value ?? 0);
 }
 
+function renderAssetList(selector, assets, emptyLabel) {
+  const container = $(selector);
+  container.replaceChildren();
+  if (!assets?.length) {
+    container.textContent = emptyLabel;
+    return;
+  }
+  for (const asset of assets) {
+    const row = document.createElement('span');
+    row.className = 'asset-line';
+    row.textContent = asset;
+    container.append(row);
+  }
+}
+
 function render(state) {
   const result = state.result || {};
   const best = result.best_feasible;
@@ -23,8 +38,8 @@ function render(state) {
 
   $('#longIndex').textContent = `${formatNumber(state.model?.long_count || 0)} CONTRACTS`;
   $('#shortIndex').textContent = `${formatNumber(state.model?.short_count || 0)} CONTRACTS`;
-  $('#longAssets').textContent = best?.long?.join(' · ') || 'Waiting for a feasible sample';
-  $('#shortAssets').textContent = best?.short?.join(' · ') || 'Run QAOA to find a portfolio';
+  renderAssetList('#longAssets', best?.long, 'Waiting for a feasible sample');
+  renderAssetList('#shortAssets', best?.short, 'Run QAOA to find a portfolio');
   $('#energyScore').textContent = best?.energy == null ? '—' : Number(best.energy).toFixed(6);
 
   const carbon = Number(best?.net_carbon ?? 0);

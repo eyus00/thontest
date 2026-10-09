@@ -300,7 +300,15 @@ def describe(bits, u):
     return f"long={longs} short={shorts} net_carbon={net:.2f}"
 
 
-def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
+def summarize_counts(
+    counts,
+    u,
+    q,
+    constant,
+    k,
+    reverse_bitstrings=False,
+    expected_shots=None,
+):
     measurements = []
     for raw_bits, raw_count in counts.items():
         bitstring = str(raw_bits).replace(" ", "")
@@ -322,6 +330,11 @@ def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
     total = sum(item["count"] for item in measurements)
     if total <= 0:
         raise ValueError("Measurement counts must contain a positive total")
+    if expected_shots is not None and np.isclose(total, 1.0, rtol=0.0, atol=1e-6):
+        scale = expected_shots / total
+        for item in measurements:
+            item["count"] *= scale
+        total = float(expected_shots)
     for item in measurements:
         item["probability"] = item["count"] / total
     ranked = measurements
@@ -342,8 +355,25 @@ def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
     }
 
 
-def save_dashboard_result(counts, u, q, constant, k, source, reverse_bitstrings=False):
-    result = summarize_counts(counts, u, q, constant, k, reverse_bitstrings)
+def save_dashboard_result(
+    counts,
+    u,
+    q,
+    constant,
+    k,
+    source,
+    reverse_bitstrings=False,
+    expected_shots=None,
+):
+    result = summarize_counts(
+        counts,
+        u,
+        q,
+        constant,
+        k,
+        reverse_bitstrings,
+        expected_shots,
+    )
     with progress("Calculating continuous Hobby-Rice balance certificate"):
         result["continuous_balance"] = hobby_rice_balance(u)
     result["source"] = source
@@ -407,7 +437,13 @@ def run_qaoa(q, constant, u, k, shots, steps):
         )
     counts = {key(name): float(count) for name, count in result.items()}
     saved_result = save_dashboard_result(
-        counts, u, q, constant, k, f"YAHOO / LOCAL QRISP / {shots} SHOTS"
+        counts,
+        u,
+        q,
+        constant,
+        k,
+        f"YAHOO / LOCAL QRISP / {shots} SHOTS",
+        expected_shots=shots,
     )
     valid = [(energy(tuple(map(int, name)), q, constant), name, count) for name, count in counts.items() if feasible(tuple(map(int, name)), u.n, k)]
     print(
