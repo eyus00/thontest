@@ -1,6 +1,23 @@
 const $ = (selector) => document.querySelector(selector);
 let datasetAvailable = false;
-let orbitReturnTimer = 0;
+let orbitCleanupTimer = 0;
+let runMessageTimer = 0;
+let runMessageSwapTimer = 0;
+let activeOrbitClone = null;
+const runMessages = {
+  local: [
+    ['Preparing futures data', 'Aligning market history for the selected assets'],
+    ['Building the portfolio objective', 'Combining carbon exposure and covariance risk'],
+    ['Exploring long / short portfolios', 'QAOA simulation is sampling candidate hedges'],
+    ['Checking portfolio constraints', 'Evaluating sampled positions for feasibility'],
+  ],
+  resonance: [
+    ['Preparing futures data', 'Loading the selected assets and portfolio constraints'],
+    ['Compiling the circuit', 'Preparing the QAOA circuit for the selected IQM backend'],
+    ['Sampling on IQM hardware', 'The remote device is returning measured samples'],
+    ['Decoding the portfolio', 'Checking the returned samples against portfolio rules'],
+  ],
+};
 
 function formatNumber(value, digits = 0) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value ?? 0);
@@ -10,9 +27,19 @@ function renderAssetList(selector, assets, emptyLabel) {
   const container = $(selector);
   container.replaceChildren();
   if (!assets?.length) {
-    container.textContent = emptyLabel;
+    container.classList.add('is-skeleton');
+    container.setAttribute('aria-label', emptyLabel);
+    for (const width of ['82%', '66%', '74%']) {
+      const row = document.createElement('span');
+      row.className = 'asset-line skeleton-line';
+      row.style.setProperty('--skeleton-width', width);
+      row.setAttribute('aria-hidden', 'true');
+      container.append(row);
+    }
     return;
   }
+  container.classList.remove('is-skeleton');
+  container.removeAttribute('aria-label');
   for (const asset of assets) {
     const row = document.createElement('span');
     row.className = 'asset-line';
@@ -66,8 +93,8 @@ function render(state) {
 
   $('#longIndex').textContent = `${formatNumber(state.model?.long_count || 0)} CONTRACTS`;
   $('#shortIndex').textContent = `${formatNumber(state.model?.short_count || 0)} CONTRACTS`;
-  renderAssetList('#longAssets', best?.long, 'Waiting for a feasible sample');
-  renderAssetList('#shortAssets', best?.short, 'Run QAOA to find a portfolio');
+  renderAssetList('#longAssets', best?.long, 'Long portfolio positions will appear after a run');
+  renderAssetList('#shortAssets', best?.short, 'Short portfolio positions will appear after a run');
   $('#energyScore').textContent = best?.energy == null ? '—' : Number(best.energy).toFixed(6);
 
   const hasComponents = best?.carbon_component != null && best?.risk_component != null;
@@ -164,41 +191,90 @@ async function runPortfolio(kind) {
 }
 
 function startRunVisual(kind) {
-  window.clearTimeout(orbitReturnTimer);
-  orbitReturnTimer = 0;
-  const orbit = $('.hero-orbit');
-  const rect = orbit.getBoundingClientRect();
+  window.clearTimeout(orbitCleanupTimer);
+  orbitCleanupTimer = 0;
+  window.clearInterval(runMessageTimer);
+  window.clearTimeout(runMessageSwapTimer);
+  const overlay = $('#runVisualOverlay');
+  overlay.classList.remove('is-returning');
+  activeOrbitClone?.remove();
+  const source = $('.hero-orbit');
+  const rect = source.getBoundingClientRect();
+  const computed = getComputedStyle(source);
+  const baseWidth = Number.parseFloat(computed.width) || 330;
+  const baseHeight = Number.parseFloat(computed.height) || 280;
+  const baseScale = rect.width ? rect.width / baseWidth : 0.68;
   const startX = rect.width ? rect.left + rect.width / 2 : window.innerWidth - 80;
   const startY = rect.height ? rect.top + rect.height / 2 : 115;
   const offsetX = startX - window.innerWidth / 2;
   const offsetY = startY - window.innerHeight / 2;
-  orbit.style.setProperty('--orbit-start-x', `${offsetX}px`);
-  orbit.style.setProperty('--orbit-start-y', `${offsetY}px`);
-  orbit.classList.add('is-floating', 'is-preparing');
-  orbit.getBoundingClientRect();
-  $('#runVisualOverlay').classList.add('is-active');
+  const clone = source.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+  clone.classList.add('run-orbit-clone', 'is-preparing');
+  clone.style.setProperty('--orbit-start-x', `${offsetX}px`);
+  clone.style.setProperty('--orbit-start-y', `${offsetY}px`);
+  clone.style.setProperty('--orbit-base-scale', String(baseScale));
+  clone.style.setProperty('--orbit-width', `${baseWidth}px`);
+  clone.style.setProperty('--orbit-height', `${baseHeight}px`);
+  activeOrbitClone = clone;
+  $('#runVisualOverlay').append(clone);
+  clone.getBoundingClientRect();
+  overlay.classList.add('is-active');
   $('#runVisualMode').textContent = kind === 'local' ? 'LOCAL QAOA SIMULATION' : 'IQM RESONANCE HARDWARE';
-  $('#runVisualTitle').textContent = kind === 'local' ? 'Finding a balanced portfolio' : 'Preparing and sampling on IQM';
-  $('#runVisualDetail').textContent = kind === 'local'
-    ? 'Your computer is simulating candidate long / short hedges'
-    : 'Circuit preparation here · quantum sampling on the selected backend';
+  const messages = runMessages[kind];
+  let messageIndex = 0;
+  showRunMessage(messages[messageIndex]);
+  runMessageTimer = window.setInterval(() => {
+    messageIndex = (messageIndex + 1) % messages.length;
+    const message = messages[messageIndex];
+    const messageElement = $('.run-visual-message');
+    messageElement.classList.add('is-changing');
+    runMessageSwapTimer = window.setTimeout(() => {
+      showRunMessage(message);
+      messageElement.classList.remove('is-changing');
+      runMessageSwapTimer = 0;
+    }, 180);
+  }, 3000);
   requestAnimationFrame(() => {
-    orbit.classList.remove('is-preparing');
-    orbit.classList.add('is-centered');
+    clone.classList.remove('is-preparing');
+    clone.classList.add('is-centered');
   });
 }
 
+function showRunMessage([title, detail]) {
+  $('#runVisualTitle').textContent = title;
+  $('#runVisualDetail').textContent = detail;
+}
+
 function stopRunVisual() {
-  const orbit = $('.hero-orbit');
-  orbit.classList.remove('is-centered');
-  $('#runVisualOverlay').classList.remove('is-active');
-  const returnDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 30 : 750;
-  orbitReturnTimer = window.setTimeout(() => {
-    orbit.classList.remove('is-floating', 'is-preparing');
-    orbit.style.removeProperty('--orbit-start-x');
-    orbit.style.removeProperty('--orbit-start-y');
-    orbitReturnTimer = 0;
-  }, returnDelay);
+  window.clearInterval(runMessageTimer);
+  runMessageTimer = 0;
+  window.clearTimeout(runMessageSwapTimer);
+  runMessageSwapTimer = 0;
+  const clone = activeOrbitClone;
+  if (!clone) return;
+  clone.classList.add('is-returning');
+  clone.classList.remove('is-centered');
+  clone.addEventListener('transitionend', onReturnComplete);
+  const overlay = $('#runVisualOverlay');
+  overlay.classList.add('is-returning');
+  overlay.classList.remove('is-active');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  orbitCleanupTimer = window.setTimeout(cleanup, reducedMotion ? 40 : 1000);
+
+  function onReturnComplete(event) {
+    if (event.target === clone && event.propertyName === 'transform') cleanup();
+  }
+
+  const cleanup = () => {
+    window.clearTimeout(orbitCleanupTimer);
+    orbitCleanupTimer = 0;
+    clone.removeEventListener('transitionend', onReturnComplete);
+    clone.remove();
+    overlay.classList.remove('is-returning');
+    if (activeOrbitClone === clone) activeOrbitClone = null;
+  };
 }
 
 $('#settingAssets').addEventListener('change', syncPortfolioSettings);

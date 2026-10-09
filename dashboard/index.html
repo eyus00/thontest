@@ -62,10 +62,9 @@
           </dialog>
         </div>
         <div class="hero-orbit" aria-hidden="true">
-          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="orbit orbit-one"><b class="orbit-label label-a">YAHOO</b><b class="orbit-label label-c">QAOA</b></div>
+          <div class="orbit orbit-two"><b class="orbit-label label-b">QUBO</b></div>
           <div class="orbit-core"><span>Q</span><small id="orbitQubits">— qubits</small></div>
-          <b class="orbit-label label-a">YAHOO</b><b class="orbit-label label-b">QUBO</b>
-          <b class="orbit-label label-c">QAOA</b>
         </div>
       </section>
 
@@ -85,13 +84,13 @@
       <section class="portfolio-grid">
         <article class="portfolio-card long-card">
           <div class="card-top"><span class="leg-pill">LONG LEG</span><span class="leg-index" id="longIndex">2 CONTRACTS</span></div>
-          <div class="leg-title" id="longAssets">Portfolio will appear here</div>
+          <div class="leg-title" id="longAssets" aria-label="Portfolio positions will appear after a run"></div>
           <div class="leg-foot"><span>Selected positions</span><span class="green-text">LONG</span></div>
         </article>
         <div class="swap-mark" aria-hidden="true">⇄</div>
         <article class="portfolio-card short-card">
           <div class="card-top"><span class="leg-pill">SHORT LEG</span><span class="leg-index" id="shortIndex">2 CONTRACTS</span></div>
-          <div class="leg-title" id="shortAssets">Run the local solve to begin</div>
+          <div class="leg-title" id="shortAssets" aria-label="Portfolio positions will appear after a run"></div>
           <div class="leg-foot"><span>Selected positions</span><span class="coral-text">SHORT</span></div>
         </article>
         <aside class="score-card">
@@ -123,7 +122,7 @@
           <div class="bar-rows"><div><span>valid states</span><b><i id="validBar"></i></b></div><div><span>other states</span><b class="pale"><i id="otherBar"></i></b></div></div>
         </article>
         <article class="metric-panel run-panel">
-          <div class="panel-head"><div><p class="kicker">Run profile</p><h3>Experiment profile</h3></div><span class="metric-icon">QAOA</span></div>
+          <div class="panel-head"><div><p class="kicker">Run profile</p><h3>Profile X</h3></div><span class="metric-icon">QAOA</span></div>
           <dl><div><dt>Assets</dt><dd id="assets">—</dd></div><div><dt>Qubits</dt><dd id="qubits">—</dd></div><div><dt>Shots</dt><dd id="shots">—</dd></div><div><dt>Backend</dt><dd class="backend" id="backend">LOCAL QRISP</dd></div></dl>
         </article>
       </section>
