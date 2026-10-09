@@ -14,6 +14,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from qfhackathon_core import FUTURES
+
 ROOT = Path(__file__).resolve().parent
 DASHBOARD = ROOT / "dashboard"
 DATA_DIR = ROOT / "data"
@@ -58,8 +60,11 @@ def state(*, include_saved_result: bool = True) -> dict:
             metadata = list(csv.DictReader(metadata_file))
     else:
         metadata = []
+    metadata = [row for row in metadata if row.get("ticker") in FUTURES]
     dataset_available = returns_path.is_file() and len(metadata) >= 2
     result = read_json(RESULT_PATH, {}) if dataset_available and include_saved_result else {}
+    if any(ticker not in FUTURES for ticker in (result.get("universe") or [])):
+        result = {}
 
     best = result.get("best_feasible") or {}
     bitstring = best.get("bitstring", "")
@@ -304,7 +309,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if not metadata_path.is_file() or not (DATA_DIR / "returns.csv").is_file():
             raise ValueError("Generate the futures dataset from the dashboard first.")
         with metadata_path.open(newline="", encoding="utf-8") as metadata_file:
-            available_assets = sum(1 for _ in csv.DictReader(metadata_file))
+            available_assets = sum(
+                1 for row in csv.DictReader(metadata_file)
+                if row.get("ticker") in FUTURES
+            )
         integer_limits = {
             "n": (2, min(15, available_assets)),
             "shots": (32, 10000),

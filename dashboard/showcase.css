@@ -26,12 +26,16 @@
 .primary-button{width:auto;min-width:0;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:0;padding:11px 16px;box-shadow:0 8px 20px rgba(24,36,43,.10);font-size:13px;white-space:nowrap}
 .primary-button:hover{transform:translateY(-1px)}
 .primary-button:disabled{opacity:.75;cursor:progress;transform:none}
+.hero-actions #runButton .button-label{color:inherit;margin-right:0}
+.primary-button.is-loading{gap:9px}
+.primary-button.is-loading::before{width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;content:"";animation:button-spinner .7s linear infinite}
+@keyframes button-spinner{to{transform:rotate(360deg)}}
 .resonance-button{background:var(--ink);color:var(--paper)}
 .resonance-button:hover{background:#273940}
 .run-status{max-width:680px;line-height:1.5;overflow-wrap:anywhere;color:var(--muted);font-size:12px}
 .run-visual-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:rgba(244,241,233,.77);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity .45s ease,visibility .45s}
-.run-visual-overlay.is-active{opacity:1;visibility:visible}
-.run-visual-overlay.is-returning{visibility:visible;transition:opacity .82s cubic-bezier(.22,.72,.22,1),visibility 0s linear .82s}
+.run-visual-overlay.is-active{opacity:1;visibility:visible;pointer-events:auto}
+.run-visual-overlay.is-returning{visibility:visible;transition:opacity .82s cubic-bezier(.22,.72,.22,1),visibility 0s linear .82s;pointer-events:none}
 .run-visual-message{position:absolute;top:calc(50% + 165px);display:grid;gap:8px;text-align:center;opacity:0;transform:translateY(8px);transition:opacity .35s ease .2s,transform .35s ease .2s}
 .run-visual-overlay.is-active .run-visual-message{opacity:1;transform:translateY(0)}
 .run-visual-message.is-changing{opacity:0;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease}

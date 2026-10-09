@@ -99,8 +99,6 @@ FUTURES = {
     "ZS=F": ("Soybeans", "agriculture", 0.0, 1.5),
     "ZM=F": ("Soybean Meal", "agriculture", 0.0, 1.3),
     "ZL=F": ("Soybean Oil", "agriculture", 0.0, 1.8),
-    "ZB=F": ("30-Year Treasury Bond", "bond", 0.0, 0.0),
-    "ZN=F": ("10-Year Treasury Note", "bond", 0.0, 0.0),
 }
 
 
@@ -150,7 +148,10 @@ def download(start, end=None):
 def load(n):
     metadata = pd.read_csv(DATA_DIR / "metadata.csv").set_index("ticker")
     returns = pd.read_csv(DATA_DIR / "returns.csv", index_col=0)
-    tickers = [ticker for ticker in returns.columns if ticker in metadata.index][:n]
+    tickers = [
+        ticker for ticker in returns.columns
+        if ticker in metadata.index and ticker in FUTURES
+    ][:n]
     if len(tickers) < 2:
         raise RuntimeError("Download the dataset first or choose at least two futures")
     return Universe(tickers, metadata.loc[tickers, "type"].tolist(), metadata.loc[tickers, "carbon"].to_numpy(float), returns[tickers].cov().to_numpy(float) * TRADING_DAYS)

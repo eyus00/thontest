@@ -170,10 +170,10 @@ async function generateDataset() {
   const button = $('#generateDatasetButton');
   button.disabled = true;
   button.setAttribute('aria-busy', 'true');
+  button.classList.add('is-loading');
   button.textContent = 'Generating futures data…';
   $('#runStatus').textContent = 'Downloading and preparing historical futures data.';
   try {
-    startRunVisual('dataset');
     const response = await fetch('/api/generate-dataset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -183,23 +183,20 @@ async function generateDataset() {
     if (!response.ok || !payload.ok) {
       throw new Error(payload.output || 'Could not generate the futures dataset.');
     }
-    render(payload.state);
+    await requestState();
     $('#runStatus').textContent = datasetAvailable
       ? `Dataset ready · ${formatNumber(payload.state.asset_count)} futures available. Choose a run method.`
       : 'Dataset download completed, but the data is incomplete. Please retry.';
   } catch (error) {
     $('#runStatus').textContent = error instanceof Error ? error.message : 'Could not generate the futures dataset.';
   } finally {
-    try {
-      stopRunVisual();
-    } finally {
-      runInProgress = false;
-      button.removeAttribute('aria-busy');
-      button.disabled = false;
-      button.textContent = 'Generate futures dataset';
-      $('#runButton').disabled = !datasetAvailable;
-      $('#openResonanceSettings').disabled = !datasetAvailable;
-    }
+    runInProgress = false;
+    button.removeAttribute('aria-busy');
+    button.classList.remove('is-loading');
+    button.disabled = false;
+    button.textContent = 'Generate futures dataset';
+    $('#runButton').disabled = !datasetAvailable;
+    $('#openResonanceSettings').disabled = !datasetAvailable;
   }
 }
 

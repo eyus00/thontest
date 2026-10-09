@@ -231,7 +231,7 @@ python qfhackathon.py download [--start YYYY-MM-DD] [--end YYYY-MM-DD]
 
 What it does:
 
-1. Downloads **unadjusted close prices** (`auto_adjust=False`) for the 15 futures tickers.
+1. Downloads **unadjusted close prices** (`auto_adjust=False`) for the 13 futures tickers.
 2. Forward-fills gaps, then drops any date where **any** ticker is still missing — so the usable history starts at the date when the *youngest* contract has data.
 3. Computes daily percent-change returns.
 4. Computes per-asset metadata (annualised expected return, annualised volatility, carbon intensity).
@@ -432,7 +432,7 @@ All logic lives in `qfhackathon_core.py`.
 
 ### 9.1 Asset universe and carbon model
 
-15 futures are defined in the `FUTURES` dict as `ticker: (name, type, mmbtu_per_unit, kg_co2_per_mmbtu)`:
+13 futures are defined in the `FUTURES` dict as `ticker: (name, type, mmbtu_per_unit, kg_co2_per_mmbtu)`:
 
 | Group | Tickers |
 |---|---|
@@ -440,7 +440,6 @@ All logic lives in `qfhackathon_core.py`.
 | Gas / refined | `NG=F`, `RB=F` (RBOB gasoline), `HO=F` (heating oil) |
 | Metals | `GC=F` (gold), `SI=F` (silver), `HG=F` (copper) |
 | Agriculture | `ZC=F`, `ZW=F`, `ZS=F`, `ZM=F`, `ZL=F` |
-| Bonds | `ZB=F` (30-yr), `ZN=F` (10-yr) |
 
 The **carbon intensity** per asset is:
 
@@ -448,7 +447,7 @@ The **carbon intensity** per asset is:
 carbon = 1000 / mean_price × mmbtu_per_unit × kg_co2_per_mmbtu
 ```
 
-i.e. kg CO₂ embodied in a **$1,000 position**, using the average historical price. Only fossil fuels have non-zero `mmbtu_per_unit`; metals, grains and bonds end up with `carbon = 0`.
+i.e. kg CO₂ embodied in a **$1,000 position**, using the average historical price. Only fossil fuels have non-zero `mmbtu_per_unit`; metals and grains end up with `carbon = 0`.
 
 `metadata.csv` also stores annualised `exp_return` and `vol` (252 trading days). **These two are informational only; the QUBO uses just carbon and covariance.**
 
