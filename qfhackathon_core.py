@@ -160,6 +160,101 @@ def build_qubo(u, k):
     return (q + q.T) / 2, constant
 
 
+def hobby_rice_balance(u, tolerance=1e-5):
+    """Numerically balance continuous exposure measures with at most t switches."""
+    from scipy.optimize import least_squares
+
+    n = u.n
+    measures = []
+    names = []
+
+    carbon = np.asarray(u.carbon, dtype=float)
+    if np.linalg.norm(carbon) > 1e-12:
+        measures.append(carbon)
+        names.append("carbon")
+
+    measures.append(np.ones(n))
+    names.append("dollar")
+
+    energy_types = {"oil", "gas", "gasoline", "heating_oil"}
+    energy_assets = np.array([kind in energy_types for kind in u.types])
+    if np.any(energy_assets):
+        weights = energy_assets.astype(float) / energy_assets.sum()
+        beta_variance = float(weights @ u.sigma @ weights)
+        if beta_variance > 1e-12:
+            beta = (u.sigma @ weights) / beta_variance
+            if np.linalg.norm(beta) > 1e-12:
+                measures.append(beta)
+                names.append("energy_sector_beta")
+
+    values = np.asarray(measures, dtype=float)
+    values /= np.linalg.norm(values, axis=1)[:, None]
+    measure_count = len(names)
+    prefix = np.column_stack((np.zeros(measure_count), np.cumsum(values, axis=1)))
+
+    def primitive(position):
+        index = min(int(position), n)
+        if index == n:
+            return prefix[:, n]
+        return prefix[:, index] + (position - index) * values[:, index]
+
+    def signed_integrals(switches):
+        result = np.zeros(measure_count)
+        left = 0.0
+        sign = 1.0
+        for right in (*np.sort(switches), float(n)):
+            result += sign * (primitive(right) - primitive(left))
+            left = right
+            sign = -sign
+        return result
+
+    starts = [np.linspace(0, n, measure_count + 2)[1:-1]]
+    rng = np.random.default_rng(0)
+    starts.extend(np.sort(rng.uniform(0, n, measure_count)) for _ in range(31))
+    best = None
+    for initial in starts:
+        result = least_squares(
+            signed_integrals,
+            initial,
+            bounds=(np.zeros(measure_count), np.full(measure_count, float(n))),
+            max_nfev=2000,
+            ftol=1e-12,
+            xtol=1e-12,
+            gtol=1e-12,
+        )
+        residual = signed_integrals(result.x)
+        error = float(np.max(np.abs(residual)))
+        if best is None or error < best["error"]:
+            best = {
+                "switches": np.sort(result.x).tolist(),
+                "residual": residual.tolist(),
+                "error": error,
+            }
+        if error <= tolerance:
+            break
+
+    return {
+        "method": "Hobby-Rice (Borsuk-Ulam) continuous relaxation",
+        "status": "numerical_balance_found" if best["error"] <= tolerance else "numerical_residual_above_tolerance",
+        "theoretical_guarantee": (
+            "For these integrable measures, a continuous +/-1 partition exists "
+            "with at most one switch per measure."
+        ),
+        "discrete_limit": (
+            "Switches may split an asset interval. The guarantee does not imply "
+            "an exactly balanced discrete portfolio or an optimal QUBO solution."
+        ),
+        "measure_names": names,
+        "switch_count": sum(
+            1 for value in best["switches"] if 1e-8 < value < n - 1e-8
+        ),
+        "switch_positions": best["switches"],
+        "normalized_residuals": dict(zip(names, best["residual"])),
+        "max_abs_normalized_residual": best["error"],
+        "tolerance": tolerance,
+    }
+
+
 def energy(bits, q, constant):
     values = np.asarray(bits, dtype=float)
     return float(values @ q @ values + constant)
@@ -228,6 +323,7 @@ def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
 
 def save_dashboard_result(counts, u, q, constant, k, source, reverse_bitstrings=False):
     result = summarize_counts(counts, u, q, constant, k, reverse_bitstrings)
+    result["continuous_balance"] = hobby_rice_balance(u)
     result["source"] = source
     RESULT_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return result
@@ -447,6 +543,7 @@ def run_comparison(args):
         "completed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "asset_count": universe.n,
         "qubit_count": 2 * universe.n,
+        "continuous_balance": hobby_rice_balance(universe),
         "shots": args.shots,
         "classical": {
             "method": "Exact feasible-state enumeration",

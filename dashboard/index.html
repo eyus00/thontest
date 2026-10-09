@@ -71,7 +71,7 @@
           <span class="leg-pill">OBJECTIVE SCORE</span>
           <strong id="energyScore">1.979479</strong>
           <div class="score-rule"><span></span></div>
-          <p>Lower is better<br><b>exact classical match</b></p>
+          <p>Lower is better<br><b>QUBO objective score</b></p>
         </aside>
       </section>
 
@@ -92,7 +92,7 @@
 
       <section class="metrics-grid">
         <article class="metric-panel exposure-panel">
-          <div class="panel-head"><div><p class="kicker">Environmental signal</p><h3>Net carbon exposure</h3></div><span class="metric-icon">CO₂</span></div>
+          <div class="panel-head"><div><p class="kicker">Financed exposure</p><h3>Net carbon exposure</h3></div><span class="metric-icon">CO₂</span></div>
           <div class="big-number" id="netCarbon">9,238<span> kg CO₂</span></div>
           <p class="muted">per equal-$1,000 position convention</p>
           <div class="exposure-track"><span id="exposureFill"></span><i></i></div>
@@ -117,9 +117,9 @@
         </article>
         <article class="method-panel">
           <p class="kicker">Why this result matters</p>
-          <h3>Symmetry narrows the search. The QUBO makes it executable.</h3>
-          <p>The long/short antipode is checked before QAOA. Carbon balance and covariance become one Ising energy landscape, then the hardware samples candidate hedges.</p>
-          <div class="method-note"><span>✓</span><b>Long/short symmetry verified</b><small>long ↔ short swap has equal symmetric energy</small></div>
+          <h3>Hobby–Rice balances the continuous relaxation.</h3>
+          <p>Via Borsuk–Ulam, Hobby–Rice guarantees a continuous ±1 partition balancing the selected exposure measures with at most one switch per measure. The numerical certificate is not a guarantee for the discrete QUBO portfolio or its optimum.</p>
+          <div class="method-note"><span>∑</span><b id="balanceStatus">Certificate appears after a run</b><small id="balanceDetails">The discrete portfolio is evaluated separately by the QUBO.</small></div>
         </article>
       </section>
 

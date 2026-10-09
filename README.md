@@ -465,6 +465,12 @@ Energy of a bitstring: `E = bᵀ Q b + constant` (function `energy`). Feasibilit
 
 `k` is validated: `0 < k ≤ floor(n/2)`.
 
+### 9.3.1 Continuous balance certificate (Hobby–Rice)
+
+Before reporting a sampled portfolio, `hobby_rice_balance()` numerically searches for a Hobby–Rice sign partition of the continuous relaxation: each asset occupies a unit interval and switch points may split an asset's interval. The balanced measures are nonzero carbon exposure, equal-dollar notional, and (when estimable) beta to an equal-weight basket of the selected oil, gas, gasoline, and heating-oil futures. The sector beta is a proxy derived from the annualised covariance matrix, not an independently sourced market-sector index.
+
+Hobby–Rice, proved using Borsuk–Ulam, guarantees that a continuous ±1 partition balancing `t` integrable measures exists with at most `t` switches. The implementation uses deterministic multi-start least squares to find and report a numerical residual for that certificate; it does not claim that a numerical optimizer verifies the theorem. Switches can split asset intervals, so this existence result does not guarantee an exactly balanced discrete portfolio, a feasible QUBO bitstring, or an optimal solution. The QUBO and its discrete constraints remain unchanged.
+
 ### 9.4 Exact classical solver (`exact`)
 
 Iterates over **all `2^(2n)` bitstrings**, keeps those passing `feasible()`, and returns the minimum-energy one. This is a pure-Python brute force: simple and certain, but cost grows **4× per extra asset**.

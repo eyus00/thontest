@@ -13,6 +13,7 @@ function formatSeconds(value) {
 function render(state) {
   const result = state.result || {};
   const comparison = state.comparison || {};
+  const balance = result.continuous_balance || comparison.continuous_balance;
   const classical = comparison.classical || {};
   const quantum = comparison.quantum || {};
   const best = result.best_feasible || {};
@@ -41,6 +42,17 @@ function render(state) {
   $('#longCarbon').textContent = longAssets.length ? 'selected' : '—';
   $('#shortCarbon').textContent = shortAssets.length ? 'selected' : '—';
   $('#exposureFill').style.width = `${Math.min(Math.max(Math.abs(carbon) / 20000 * 100, 8), 94)}%`;
+  if (balance) {
+    const residual = Number(balance.max_abs_normalized_residual);
+    $('#balanceStatus').textContent = balance.status === 'numerical_balance_found'
+      ? `Numerical balance found (${residual.toExponential(1)} max residual)`
+      : `Numerical residual above tolerance (${residual.toExponential(1)})`;
+    $('#balanceDetails').textContent =
+      `${balance.measure_names.join(', ')}; ${balance.switch_count} switches. Continuous only; discrete balance is not guaranteed.`;
+  } else {
+    $('#balanceStatus').textContent = 'Certificate appears after a run';
+    $('#balanceDetails').textContent = 'The discrete portfolio is evaluated separately by the QUBO.';
+  }
 
   $('#comparisonStamp').textContent = comparison.completed_at
     ? `Assets: ${comparison.asset_count}; qubits: ${comparison.qubit_count}; ${comparison.shots} shots`
