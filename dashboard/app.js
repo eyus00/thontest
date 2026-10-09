@@ -1,5 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
 let datasetAvailable = false;
+let orbitReturnTimer = 0;
 
 function formatNumber(value, digits = 0) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value ?? 0);
@@ -61,7 +62,7 @@ function render(state) {
   $('#shots').textContent = shots ? formatNumber(shots) : '—';
   $('#backend').textContent = hardwareRun ? (result.source.match(/IQM\s+([A-Z]+)/)?.[1] || 'IQM') : 'LOCAL QRISP';
   $('#runButton').disabled = assets <= 0;
-  $('#runResonanceButton').disabled = assets <= 0;
+  $('#openResonanceSettings').disabled = assets <= 0;
 
   $('#longIndex').textContent = `${formatNumber(state.model?.long_count || 0)} CONTRACTS`;
   $('#shortIndex').textContent = `${formatNumber(state.model?.short_count || 0)} CONTRACTS`;
@@ -117,22 +118,16 @@ function render(state) {
 
 async function runPortfolio(kind) {
   const localButton = $('#runButton');
+  const openSettingsButton = $('#openResonanceSettings');
   const remoteButton = $('#runResonanceButton');
   const status = $('#runStatus');
-  const activity = $('#runActivity');
-  const buttons = [localButton, remoteButton];
+  const buttons = [localButton, openSettingsButton, remoteButton];
   buttons.forEach((button) => {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
   });
-  activity.dataset.mode = kind;
-  activity.classList.add('is-running');
-  $('#activityTitle').textContent = kind === 'local'
-    ? 'Running the local QAOA simulation'
-    : 'Preparing the circuit for IQM Resonance';
-  $('#activityMode').textContent = kind === 'local' ? 'LOCAL SIMULATION' : 'IQM HARDWARE';
-  localButton.querySelector('.button-label').textContent = kind === 'local' ? 'Running local QAOA…' : 'Run local QAOA';
-  remoteButton.querySelector('.button-label').textContent = kind === 'resonance' ? 'Preparing Resonance run…' : 'Prepare & run on Resonance';
+  startRunVisual(kind);
+  localButton.textContent = kind === 'local' ? 'Running local QAOA…' : 'Run local QAOA';
   status.textContent = kind === 'local'
     ? 'Your computer is simulating QAOA locally; no quantum hardware is used for this run.'
     : 'Your computer prepares the problem and circuit; IQM runs the quantum sampling.';
@@ -153,33 +148,65 @@ async function runPortfolio(kind) {
     status.textContent = kind === 'local'
       ? 'Portfolio updated with a new local QAOA run.'
       : 'Portfolio updated with the IQM Resonance result.';
-    $('#activityTitle').textContent = 'Portfolio result is ready';
-    $('#activityMode').textContent = 'COMPLETE';
   } catch (error) {
     status.textContent = error.message;
-    $('#activityTitle').textContent = 'Run did not complete';
-    $('#activityMode').textContent = 'CHECK STATUS';
   } finally {
-    activity.classList.remove('is-running');
-    activity.dataset.mode = 'idle';
+    stopRunVisual();
     buttons.forEach((button) => {
       button.removeAttribute('aria-busy');
     });
     localButton.disabled = !datasetAvailable;
-    remoteButton.disabled = !datasetAvailable;
-    localButton.querySelector('.button-label').textContent = 'Run local QAOA';
-    remoteButton.querySelector('.button-label').textContent = 'Prepare & run on Resonance';
+    openSettingsButton.disabled = !datasetAvailable;
+    remoteButton.disabled = false;
+    localButton.textContent = 'Run local QAOA';
+    remoteButton.textContent = 'Run on Resonance';
   }
+}
+
+function startRunVisual(kind) {
+  window.clearTimeout(orbitReturnTimer);
+  orbitReturnTimer = 0;
+  const orbit = $('.hero-orbit');
+  const rect = orbit.getBoundingClientRect();
+  const startX = rect.width ? rect.left + rect.width / 2 : window.innerWidth - 80;
+  const startY = rect.height ? rect.top + rect.height / 2 : 115;
+  const offsetX = startX - window.innerWidth / 2;
+  const offsetY = startY - window.innerHeight / 2;
+  orbit.style.setProperty('--orbit-start-x', `${offsetX}px`);
+  orbit.style.setProperty('--orbit-start-y', `${offsetY}px`);
+  orbit.classList.add('is-floating', 'is-preparing');
+  orbit.getBoundingClientRect();
+  $('#runVisualOverlay').classList.add('is-active');
+  $('#runVisualMode').textContent = kind === 'local' ? 'LOCAL QAOA SIMULATION' : 'IQM RESONANCE HARDWARE';
+  $('#runVisualTitle').textContent = kind === 'local' ? 'Finding a balanced portfolio' : 'Preparing and sampling on IQM';
+  $('#runVisualDetail').textContent = kind === 'local'
+    ? 'Your computer is simulating candidate long / short hedges'
+    : 'Circuit preparation here · quantum sampling on the selected backend';
+  requestAnimationFrame(() => {
+    orbit.classList.remove('is-preparing');
+    orbit.classList.add('is-centered');
+  });
+}
+
+function stopRunVisual() {
+  const orbit = $('.hero-orbit');
+  orbit.classList.remove('is-centered');
+  $('#runVisualOverlay').classList.remove('is-active');
+  const returnDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 30 : 750;
+  orbitReturnTimer = window.setTimeout(() => {
+    orbit.classList.remove('is-floating', 'is-preparing');
+    orbit.style.removeProperty('--orbit-start-x');
+    orbit.style.removeProperty('--orbit-start-y');
+    orbitReturnTimer = 0;
+  }, returnDelay);
 }
 
 $('#settingAssets').addEventListener('change', syncPortfolioSettings);
 $('#runButton').addEventListener('click', () => runPortfolio('local'));
+$('#openResonanceSettings').addEventListener('click', () => $('#resonanceDialog').showModal());
 $('#runResonanceButton').addEventListener('click', () => {
-  const { backend, n, k, shots, reps } = selectedSettings();
-  const confirmed = window.confirm(
-    `Prepare a circuit for ${n} futures with ${k} positions per leg and ${reps} QAOA layer${reps === 1 ? '' : 's'}, then run ${shots} shots on IQM ${backend.toUpperCase()}? This uses the remote hardware service and may consume account credits.`,
-  );
-  if (confirmed) runPortfolio('resonance');
+  $('#resonanceDialog').close();
+  runPortfolio('resonance');
 });
 
 syncPortfolioSettings();

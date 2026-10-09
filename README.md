@@ -380,12 +380,12 @@ python dashboard_server.py
 
 The server binds only to `127.0.0.1` (local machine), has no authentication, and reads only this folder's `data/`.
 
-The dashboard has two separate run actions:
+The Antipode dashboard has two separate run actions:
 
 - **Run local QAOA** runs the Qrisp-based simulation on your computer. It does not use IQM hardware. The local optimizer uses the demo's default settings.
-- **Prepare & run on Resonance** loads the futures data and builds/compiles the problem on your computer, submits the circuit to the selected IQM backend for quantum sampling, then decodes and displays the returned samples. This is not a locally solved portfolio being sent to IQM. The hardware circuit currently uses fixed initial angles and a Qiskit circuit path that differs from the local Qrisp simulation.
+- **Run on Resonance** opens a settings dialog for futures count, positions per leg, shots, hardware layers, and IQM model. When submitted, the app prepares the problem and circuit on your computer, sends the circuit to the selected IQM backend for quantum sampling, then decodes and displays the returned samples. This is not a locally solved portfolio being sent to IQM. The hardware circuit currently uses fixed initial angles and a Qiskit circuit path that differs from the local Qrisp simulation.
 
-The collapsed **Resonance run settings** section applies only to the hardware action: futures count, positions per leg, shots, hardware QAOA layers and IQM model. A browser confirmation is required because a hardware submission may consume Resonance credits. It also requires `RESONANCE_API_TOKEN` or `IQM_TOKEN` in the server process environment. The dashboard's animated pipeline is illustrative feedback while a run is in progress, not live per-stage telemetry.
+Hardware submission may consume Resonance credits and requires `RESONANCE_API_TOKEN` or `IQM_TOKEN` in the server process environment. While either run is active, the orbital graphic floats to the center as a focused loading state; it is a visual indicator, not live per-stage telemetry.
 
 The objective meter shows the carbon and covariance contributions for the selected feasible portfolio; it is not a return or profit score. The carbon meter is signed around a zero-balance marker and scaled to that portfolio's gross financed carbon exposure. Historical saved results made before contribution fields were added show “rerun” until a new solve is run. Local runs invoke Qrisp; remote runs invoke the existing Qiskit/IQM path, whose circuit initialization and fixed angles are not identical to the local Qrisp circuit. A browser run invokes the CLI synchronously with a 1-hour timeout. Repeated and concurrent browser requests are prevented from racing over shared result files.
 

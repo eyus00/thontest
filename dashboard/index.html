@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quantum Carbon Hedge — Portfolio Demo</title>
+  <title>Antipode — Portfolio Demo</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/showcase.css">
   <script defer src="/app.js"></script>
@@ -11,14 +11,22 @@
 <body>
   <div class="shell">
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Quantum Carbon Hedge home">
-        <span class="brand-mark">QH</span>
-        <span><strong>Quantum Carbon Hedge</strong><small>long / short portfolio research</small></span>
+      <a class="brand" href="/" aria-label="Antipode home">
+        <span class="brand-mark">A</span>
+        <span><strong>Antipode</strong><small>long / short portfolio research</small></span>
       </a>
       <div class="top-actions">
         <span class="live-dot"><i></i> <span id="executionMode">PORTFOLIO DEMO</span></span>
       </div>
     </header>
+
+    <div class="run-visual-overlay" id="runVisualOverlay" aria-hidden="true">
+      <div class="run-visual-message">
+        <span class="run-visual-kicker" id="runVisualMode">LOCAL QAOA</span>
+        <strong id="runVisualTitle">Finding a balanced portfolio</strong>
+        <small id="runVisualDetail">Processing market data and sampling candidate hedges</small>
+      </div>
+    </div>
 
     <main>
       <section class="hero">
@@ -27,21 +35,17 @@
           <h1>Find the hedge<br><em>inside the energy curve.</em></h1>
           <p class="hero-text">A small QAOA experiment for long/short energy-futures selection, with a classical reference and an honest continuous-balance certificate.</p>
           <div class="hero-actions">
-            <button class="primary-button" id="runButton" type="button" disabled><span class="button-icon" aria-hidden="true">▶</span><span class="button-label">Run local QAOA</span></button>
-            <button class="primary-button resonance-button" id="runResonanceButton" type="button" disabled><span class="button-icon" aria-hidden="true">⌁</span><span class="button-label">Prepare &amp; run on Resonance</span></button>
+            <button class="primary-button" id="runButton" type="button" disabled><span class="button-label">Run local QAOA</span></button>
+            <button class="primary-button resonance-button" id="openResonanceSettings" type="button" disabled>Run on Resonance</button>
           </div>
           <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading saved portfolio…</span>
-          <div class="run-activity" id="runActivity" data-mode="idle">
-            <div class="activity-head"><span class="activity-indicator" aria-hidden="true"></span><b id="activityTitle">Ready when you are</b><small id="activityMode">RUN PIPELINE</small></div>
-            <div class="activity-track" aria-hidden="true">
-              <span><i></i>Futures data</span><span><i></i>Build QUBO</span><span><i></i>Run QAOA</span><span><i></i>Decode hedge</span>
-            </div>
-            <small class="activity-note">Workflow animation · not live stage telemetry</small>
-          </div>
-          <details class="run-settings">
-            <summary>Resonance run settings <span aria-hidden="true">＋</span></summary>
-            <div class="settings-content">
-              <p>These settings apply only to the IQM Resonance run. A hardware submission may use account credits.</p>
+          <dialog class="settings-dialog" id="resonanceDialog" aria-labelledby="resonanceDialogTitle">
+            <form method="dialog" id="resonanceSettingsForm">
+              <div class="dialog-heading">
+                <div><p class="kicker">IQM HARDWARE</p><h2 id="resonanceDialogTitle">Resonance run settings</h2></div>
+                <button class="dialog-close" type="submit" value="cancel" aria-label="Close settings">×</button>
+              </div>
+              <p class="dialog-description">Choose the problem size and hardware profile. Submitting a run may consume account credits.</p>
               <div class="settings-fields">
                 <label>Futures<select id="settingAssets"><option>4</option><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option><option>15</option></select></label>
                 <label>Positions per leg<select id="settingK"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
@@ -49,11 +53,13 @@
                 <label>Hardware QAOA layers<select id="settingReps"><option selected>1</option><option>2</option><option>3</option></select></label>
                 <label>IQM model<select id="settingBackend"><option value="emerald">Emerald</option><option value="garnet" selected>Garnet</option><option value="sirius">Sirius</option></select></label>
               </div>
-              <div class="settings-actions">
-                <span>The hardware run prepares the circuit locally, then samples it on IQM. Its circuit setup differs from local Qrisp.</span>
+              <p class="dialog-note">Your computer prepares the problem and circuit; quantum sampling runs on IQM. The hardware circuit differs from the local Qrisp simulation.</p>
+              <div class="dialog-actions">
+                <button class="secondary-button" type="submit" value="cancel">Cancel</button>
+                <button class="primary-button resonance-button" id="runResonanceButton" type="button">Run on Resonance</button>
               </div>
-            </div>
-          </details>
+            </form>
+          </dialog>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
@@ -132,7 +138,7 @@
       </section>
     </main>
 
-    <footer><span>QFH / research demo</span><span>Yahoo front-month history · roll effects unadjusted · exposure balance is not emissions reduction</span></footer>
+    <footer><span>Antipode / research demo</span><span>Yahoo front-month history · roll effects unadjusted · exposure balance is not emissions reduction</span></footer>
   </div>
 </body>
 </html>
