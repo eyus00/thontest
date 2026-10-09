@@ -16,7 +16,7 @@
         <span><strong>Quantum Carbon Hedge</strong><small>long / short portfolio research</small></span>
       </a>
       <div class="top-actions">
-        <span class="live-dot"><i></i> LOCAL DEMO</span>
+        <span class="live-dot"><i></i> <span id="executionMode">PORTFOLIO DEMO</span></span>
       </div>
     </header>
 
@@ -30,6 +30,24 @@
             <button class="primary-button" id="runButton" type="button" disabled><span class="button-icon" aria-hidden="true">▶</span><span class="button-label">Run local QAOA</span></button>
             <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading saved portfolio…</span>
           </div>
+          <details class="run-settings">
+            <summary>Run settings <span aria-hidden="true">＋</span></summary>
+            <div class="settings-content">
+              <p>Choose the portfolio size and sampling profile. Resonance submits a remote job and may use account credits.</p>
+              <div class="settings-fields">
+                <label>Futures<select id="settingAssets"><option>4</option><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option><option>15</option></select></label>
+                <label>Positions per leg<select id="settingK"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
+                <label>Shots<select id="settingShots"><option>128</option><option selected>256</option><option>512</option><option>1000</option></select></label>
+                <label>Local QAOA steps<select id="settingSteps"><option>8</option><option selected>20</option><option>40</option></select></label>
+                <label>Hardware QAOA layers<select id="settingReps"><option selected>1</option><option>2</option><option>3</option></select></label>
+                <label>IQM model<select id="settingBackend"><option value="emerald">Emerald</option><option value="garnet" selected>Garnet</option><option value="sirius">Sirius</option></select></label>
+              </div>
+              <div class="settings-actions">
+                <button class="secondary-button" id="runResonanceButton" type="button" disabled>Submit to IQM Resonance</button>
+                <span>Remote runs use the hardware path and fixed initial angles; they are not the same circuit as local Qrisp.</span>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
@@ -68,6 +86,10 @@
           <span class="leg-pill">OBJECTIVE SCORE</span>
           <strong id="energyScore">—</strong>
           <p>Lower is better<br><b>Carbon + covariance objective; not returns.</b></p>
+          <div class="objective-meter" role="img" aria-label="Relative carbon and covariance contributions to the objective">
+            <div><i id="carbonObjectiveBar"></i><i id="riskObjectiveBar"></i></div>
+            <small><span>Carbon <b id="carbonObjectiveValue">—</b></span><span>Covariance <b id="riskObjectiveValue">—</b></span></small>
+          </div>
         </aside>
       </section>
 
@@ -76,6 +98,11 @@
           <div class="panel-head"><div><p class="kicker">Exposure estimate</p><h3>Net financed carbon</h3></div><span class="metric-icon">CO₂</span></div>
           <div class="big-number" id="netCarbon">—<span> kg CO₂</span></div>
           <p class="muted">Estimated per equal-$1,000 position. Balancing exposure is not emissions reduction.</p>
+          <div class="carbon-meter" aria-label="Signed net financed carbon relative to gross financed carbon">
+            <div class="carbon-meter-track"><i></i><b></b><i id="carbonMeterFill"></i></div>
+            <div class="carbon-meter-labels"><span id="carbonMeterNegative">−gross</span><span>0 · balanced</span><span id="carbonMeterPositive">+gross</span></div>
+            <small id="carbonMeterCaption">Net / gross financed carbon exposure</small>
+          </div>
         </article>
         <article class="metric-panel validity-panel">
           <div class="panel-head"><div><p class="kicker">Sample quality</p><h3>Feasible shots</h3></div><span class="metric-icon check">✓</span></div>
@@ -84,7 +111,7 @@
           <div class="bar-rows"><div><span>valid states</span><b><i id="validBar"></i></b></div><div><span>other states</span><b class="pale"><i id="otherBar"></i></b></div></div>
         </article>
         <article class="metric-panel run-panel">
-          <div class="panel-head"><div><p class="kicker">Local run</p><h3>Experiment profile</h3></div><span class="metric-icon">P=1</span></div>
+          <div class="panel-head"><div><p class="kicker">Run profile</p><h3>Experiment profile</h3></div><span class="metric-icon">QAOA</span></div>
           <dl><div><dt>Assets</dt><dd id="assets">—</dd></div><div><dt>Qubits</dt><dd id="qubits">—</dd></div><div><dt>Shots</dt><dd id="shots">—</dd></div><div><dt>Backend</dt><dd class="backend" id="backend">LOCAL QRISP</dd></div></dl>
         </article>
       </section>

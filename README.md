@@ -270,7 +270,7 @@ Runs the exact solver first (as a reference), then QAOA at depth `p = 1` in Qris
 ### `resonance` — QAOA on IQM hardware
 
 ```bash
-python qfhackathon.py resonance [--dry-run] [--shots S] [--reps R] [--n N] [--k K] [--yes]
+python qfhackathon.py resonance [--dry-run] [--shots S] [--reps R] [--n N] [--k K] [--backend {emerald,garnet,sirius}]
 ```
 
 | Flag | Default | Description |
@@ -280,7 +280,8 @@ python qfhackathon.py resonance [--dry-run] [--shots S] [--reps R] [--n N] [--k 
 | `--reps` | `1` | QAOA depth `p` (number of cost/mixer layers). |
 | `--n` | `5` | Number of assets. |
 | `--k` | `2` | Assets per leg. |
-| `--yes` | off | Defined for consistency, but `resonance` **does not prompt for confirmation** — it submits immediately unless `--dry-run` is set. (`--yes` only matters for `compare`.) |
+| `--backend` | `garnet` or `IQM_BACKEND` | IQM Resonance backend identifier: `emerald`, `garnet`, or `sirius`. |
+| `--yes` | off | Accepted for CLI consistency; the specialist `resonance` command itself submits without prompting. Use `--dry-run` to compile without submitting. |
 
 Requires `RESONANCE_API_TOKEN` or `IQM_TOKEN`. If no dataset exists locally, it downloads the default window first. Saves raw counts to `data/resonance_counts.json` and the decoded summary to `data/dashboard_result.json` (source tag `YAHOO / IQM <BACKEND> / <shots> SHOTS`).
 
@@ -379,7 +380,9 @@ python dashboard_server.py
 
 The server binds only to `127.0.0.1` (local machine), has no authentication, and reads only this folder's `data/`.
 
-The presentation dashboard offers one action: **Run local QAOA**. It uses 8 assets, k = 2, 256 shots and 20 optimiser steps; `python qfhackathon.py demo` accepts alternate values. A browser run invokes the CLI synchronously with a 1-hour timeout. Repeated and concurrent browser requests are prevented from racing over shared result files.
+The primary action runs local QAOA. The collapsed **Run settings** section lets you choose the futures count, positions per leg, shots, local steps, hardware layers and IQM model. Hardware submission requires a browser confirmation because it may consume Resonance credits. It also requires `RESONANCE_API_TOKEN` or `IQM_TOKEN` in the server process environment.
+
+The objective meter shows the carbon and covariance contributions for the selected feasible portfolio; it is not a return or profit score. The carbon meter is signed around a zero-balance marker and scaled to that portfolio's gross financed carbon exposure. Historical saved results made before contribution fields were added show “rerun” until a new solve is run. Local runs invoke Qrisp; remote runs invoke the existing Qiskit/IQM path, whose circuit initialization and fixed angles are not identical to the local Qrisp circuit. A browser run invokes the CLI synchronously with a 1-hour timeout. Repeated and concurrent browser requests are prevented from racing over shared result files.
 
 ### HTTP API
 
@@ -387,19 +390,23 @@ The presentation dashboard offers one action: **Run local QAOA**. It uses 8 asse
 |---|---|
 | `GET /` and static files | Files from `dashboard/` (`.html`, `.css`, `.js` only get proper content types; path traversal outside `dashboard/` is blocked) |
 | `GET /api/state` | JSON: selected-run `model`, `result`, `source`, `asset_count`, `qubit_count` |
-| `POST /api/run-local` | JSON: `{ok, output, state}`; HTTP 500 on failure, 504 on timeout |
+| `POST /api/run-local` | JSON body: `{n, k, shots, steps}`; returns `{ok, output, state}` |
+| `POST /api/run-resonance` | JSON body: `{n, k, shots, reps, backend, confirmed}`; requires `confirmed: true`; returns `{ok, output, state}` |
+
+The API validates portfolio dimensions, shot/layer limits and the IQM backend allow-list. A missing hardware credential or provider/backend error is returned visibly by the dashboard; no dependencies are installed automatically.
 
 `/api/state` converts tickers (e.g. `CL=F`) to human names (e.g. "WTI crude oil") in the results before sending them to the UI.
 
 ### Panels
 
 - **Selected portfolio** — sampled long and short legs with the QUBO objective score.
+- **Objective breakdown** — carbon and covariance contribution values and their relative share of the objective.
 - **Net financed carbon** — signed exposure estimate for equal-$1,000 positions; this is not emissions reduction.
 - **Feasible shots** — fraction of QAOA samples satisfying all portfolio constraints.
 - **Experiment profile** — selected asset count, corresponding qubit count, shots and backend.
 - **Hobby–Rice balance certificate** — numerical continuous-relaxation result and explicit warning that it does not certify discrete optimality.
 
-Timing benchmarks and hardware submission are kept in specialist CLI workflows, not in the presentation interface.
+Detailed timing benchmarks remain in the CLI. The optional hardware action is tucked into run settings rather than shown as a competing primary action.
 
 ---
 

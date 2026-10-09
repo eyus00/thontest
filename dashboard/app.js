@@ -1,4 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
+let datasetAvailable = false;
 
 function formatNumber(value, digits = 0) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value ?? 0);
@@ -19,6 +20,29 @@ function renderAssetList(selector, assets, emptyLabel) {
   }
 }
 
+function syncPortfolioSettings() {
+  const assetCount = Number($('#settingAssets').value);
+  const maximumK = Math.floor(assetCount / 2);
+  const kSelect = $('#settingK');
+  for (const option of kSelect.options) {
+    option.disabled = Number(option.value) > maximumK;
+  }
+  if (Number(kSelect.value) > maximumK) {
+    kSelect.value = String(maximumK);
+  }
+}
+
+function selectedSettings() {
+  return {
+    n: Number($('#settingAssets').value),
+    k: Number($('#settingK').value),
+    shots: Number($('#settingShots').value),
+    steps: Number($('#settingSteps').value),
+    reps: Number($('#settingReps').value),
+    backend: $('#settingBackend').value,
+  };
+}
+
 function render(state) {
   const result = state.result || {};
   const best = result.best_feasible;
@@ -27,14 +51,18 @@ function render(state) {
   const qubits = Number(result.qubit_count ?? state.qubit_count ?? assets * 2);
   const shots = Number(result.total_shots ?? 0);
   const feasible = Number(result.feasible_probability ?? 0);
+  const hardwareRun = (result.source || '').includes('IQM');
+  datasetAvailable = assets > 0;
 
+  $('#executionMode').textContent = hardwareRun ? 'IQM HARDWARE RESULT' : 'LOCAL DEMO';
   $('#sourceTag').textContent = result.source || state.source || 'LOCAL PORTFOLIO DEMO';
   $('#assets').textContent = formatNumber(assets);
   $('#qubits').textContent = formatNumber(qubits);
   $('#orbitQubits').textContent = `${formatNumber(qubits)} qubits`;
   $('#shots').textContent = shots ? formatNumber(shots) : '—';
-  $('#backend').textContent = (result.source || '').includes('IQM') ? 'IQM' : 'LOCAL QRISP';
+  $('#backend').textContent = hardwareRun ? (result.source.match(/IQM\s+([A-Z]+)/)?.[1] || 'IQM') : 'LOCAL QRISP';
   $('#runButton').disabled = assets <= 0;
+  $('#runResonanceButton').disabled = assets <= 0;
 
   $('#longIndex').textContent = `${formatNumber(state.model?.long_count || 0)} CONTRACTS`;
   $('#shortIndex').textContent = `${formatNumber(state.model?.short_count || 0)} CONTRACTS`;
@@ -42,9 +70,29 @@ function render(state) {
   renderAssetList('#shortAssets', best?.short, 'Run QAOA to find a portfolio');
   $('#energyScore').textContent = best?.energy == null ? '—' : Number(best.energy).toFixed(6);
 
+  const hasComponents = best?.carbon_component != null && best?.risk_component != null;
+  const carbonComponent = Math.max(0, Number(best?.carbon_component ?? 0));
+  const riskComponent = Math.max(0, Number(best?.risk_component ?? 0));
+  const componentTotal = carbonComponent + riskComponent;
+  const carbonShare = componentTotal ? carbonComponent / componentTotal : 0;
+  $('#carbonObjectiveBar').style.width = `${carbonShare * 100}%`;
+  $('#riskObjectiveBar').style.width = `${hasComponents ? (1 - carbonShare) * 100 : 0}%`;
+  $('#carbonObjectiveValue').textContent = hasComponents ? carbonComponent.toFixed(3) : 'rerun';
+  $('#riskObjectiveValue').textContent = hasComponents ? riskComponent.toFixed(3) : 'rerun';
+
   const carbon = Number(best?.net_carbon ?? 0);
+  const grossCarbon = Math.max(0, Number(best?.gross_carbon ?? Math.abs(carbon)));
   const sign = carbon > 0 ? '+' : carbon < 0 ? '−' : '';
   $('#netCarbon').innerHTML = `${sign}${formatNumber(Math.abs(carbon))}<span> kg CO₂</span>`;
+  $('#carbonMeterNegative').textContent = `−${formatNumber(grossCarbon)} kg`;
+  $('#carbonMeterPositive').textContent = `+${formatNumber(grossCarbon)} kg`;
+  const fraction = grossCarbon > 0 ? Math.max(-1, Math.min(1, carbon / grossCarbon)) : 0;
+  const fill = $('#carbonMeterFill');
+  fill.style.left = `${50 + Math.min(fraction, 0) * 50}%`;
+  fill.style.width = `${Math.abs(fraction) * 50}%`;
+  fill.classList.toggle('positive', fraction > 0);
+  $('#carbonMeterCaption').textContent = `Net exposure is ${Math.abs(fraction * 100).toFixed(1)}% of gross financed exposure`;
+
   $('#feasibleRate').innerHTML = `${(feasible * 100).toFixed(1)}<span>%</span>`;
   $('.validity-panel .bar-rows b i').style.width = `${Math.max(feasible * 100, 1)}%`;
   $('.validity-panel .bar-rows .pale i').style.width = `${Math.max((1 - feasible) * 100, 1)}%`;
@@ -64,41 +112,70 @@ function render(state) {
   $('#runStatus').textContent = assets <= 0
     ? 'Dataset missing. Start with “python qfhackathon.py demo” in Terminal.'
     : best
-      ? `${formatNumber(assets)} assets · ${formatNumber(qubits)} qubits · ${formatNumber(shots)} local shots`
-      : 'Ready to run the local portfolio solver';
+      ? `${formatNumber(assets)} assets · ${formatNumber(qubits)} qubits · ${formatNumber(shots)} shots`
+      : 'Ready to run the portfolio solver';
 }
+
+async function runPortfolio(kind) {
+  const localButton = $('#runButton');
+  const remoteButton = $('#runResonanceButton');
+  const status = $('#runStatus');
+  const buttons = [localButton, remoteButton];
+  const originalLabel = $('.button-label').textContent;
+  buttons.forEach((button) => {
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+  });
+  $('.button-label').textContent = kind === 'local' ? 'Optimizing portfolio…' : 'Submitting to Resonance…';
+  status.textContent = kind === 'local'
+    ? 'Building the QUBO and running local QAOA. This can take a few minutes.'
+    : 'Compiling and submitting the selected QAOA circuit to IQM Resonance.';
+  try {
+    const response = await fetch(`/api/run-${kind}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...selectedSettings(),
+        confirmed: kind === 'resonance',
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.output || `The ${kind} run failed.`);
+    }
+    render(payload.state);
+    status.textContent = kind === 'local'
+      ? 'Portfolio updated with a new local QAOA run.'
+      : 'Portfolio updated with the IQM Resonance result.';
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    buttons.forEach((button) => {
+      button.removeAttribute('aria-busy');
+    });
+    localButton.disabled = !datasetAvailable;
+    remoteButton.disabled = !datasetAvailable;
+    $('.button-label').textContent = originalLabel;
+  }
+}
+
+$('#settingAssets').addEventListener('change', syncPortfolioSettings);
+$('#runButton').addEventListener('click', () => runPortfolio('local'));
+$('#runResonanceButton').addEventListener('click', () => {
+  const { backend, n, k, shots } = selectedSettings();
+  const confirmed = window.confirm(
+    `Submit ${n} futures, ${k} positions per leg, and ${shots} shots to IQM ${backend.toUpperCase()}? This uses the remote hardware service and may consume account credits.`,
+  );
+  if (confirmed) runPortfolio('resonance');
+});
+
+syncPortfolioSettings();
+requestState().catch((error) => {
+  $('#runStatus').textContent = error.message;
+});
 
 async function requestState() {
   const response = await fetch('/api/state', { cache: 'no-store' });
   if (!response.ok) throw new Error('Could not load the saved portfolio state.');
   render(await response.json());
 }
-
-$('#runButton').addEventListener('click', async () => {
-  const button = $('#runButton');
-  const label = $('.button-label');
-  const status = $('#runStatus');
-  button.disabled = true;
-  button.setAttribute('aria-busy', 'true');
-  label.textContent = 'Optimizing portfolio…';
-  status.textContent = 'Building the QUBO and running local QAOA. This can take a few minutes.';
-  try {
-    const response = await fetch('/api/run-local', { method: 'POST' });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.output || 'The local QAOA run failed.');
-    }
-    render(payload.state);
-    status.textContent = 'Portfolio updated with a new local QAOA run.';
-  } catch (error) {
-    status.textContent = error.message;
-  } finally {
-    button.disabled = false;
-    button.removeAttribute('aria-busy');
-    label.textContent = 'Run local QAOA';
-  }
-});
-
-requestState().catch((error) => {
-  $('#runStatus').textContent = error.message;
-});

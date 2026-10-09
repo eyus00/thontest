@@ -29,7 +29,7 @@ class DashboardHTTPServer(ThreadingHTTPServer):
         self,
         server_address,
         request_handler_class,
-        run_options: dict[str, int],
+        run_options: dict[str, int | str],
     ) -> None:
         self.run_options = run_options
         super().__init__(server_address, request_handler_class)
@@ -53,6 +53,15 @@ def state() -> dict:
 
     best = result.get("best_feasible") or {}
     bitstring = best.get("bitstring", "")
+    carbon_by_ticker = {
+        row["ticker"]: float(row["carbon"])
+        for row in metadata
+    }
+    if best and best.get("gross_carbon") is None:
+        best["gross_carbon"] = sum(
+            carbon_by_ticker.get(ticker, 0.0)
+            for ticker in best.get("long", []) + best.get("short", [])
+        )
     asset_count = (
         result.get("asset_count")
         or len(result.get("universe", []))
@@ -129,13 +138,42 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         endpoint = urlparse(self.path).path
+        if endpoint not in {"/api/run-local", "/api/run-resonance"}:
+            self._send(404, b"Not found", "text/plain; charset=utf-8")
+            return
+        try:
+            options = self._run_options()
+        except (ValueError, UnicodeDecodeError) as error:
+            self._send(
+                400,
+                json.dumps({"ok": False, "output": str(error)}).encode(),
+                "application/json",
+            )
+            return
+
         if endpoint == "/api/run-local":
             command = [
                 sys.executable, str(ROOT / "qfhackathon.py"), "local",
-                "--n", str(self.server.run_options["n"]),
-                "--k", str(self.server.run_options["k"]),
-                "--shots", str(self.server.run_options["shots"]),
-                "--steps", str(self.server.run_options["steps"]),
+                "--n", str(options["n"]),
+                "--k", str(options["k"]),
+                "--shots", str(options["shots"]),
+                "--steps", str(options["steps"]),
+            ]
+        elif endpoint == "/api/run-resonance":
+            if options.get("confirmed") is not True:
+                self._send(400, json.dumps({
+                    "ok": False,
+                    "output": "Hardware submission requires explicit confirmation.",
+                }).encode(), "application/json")
+                return
+            command = [
+                sys.executable, str(ROOT / "qfhackathon.py"), "resonance",
+                "--n", str(options["n"]),
+                "--k", str(options["k"]),
+                "--shots", str(options["shots"]),
+                "--reps", str(options["reps"]),
+                "--backend", str(options["backend"]),
+                "--yes",
             ]
         else:
             self._send(404, b"Not found", "text/plain; charset=utf-8")
@@ -180,6 +218,53 @@ class DashboardHandler(BaseHTTPRequestHandler):
         finally:
             RUN_LOCK.release()
 
+    def _run_options(self) -> dict[str, int | str | bool]:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ValueError("Invalid request content length.") from error
+        if not 0 < content_length <= 2048:
+            raise ValueError("Run settings request is empty or too large.")
+        payload = json.loads(self.rfile.read(content_length))
+        if not isinstance(payload, dict):
+            raise ValueError("Run settings must be a JSON object.")
+        allowed = {"n", "k", "shots", "steps", "reps", "backend", "confirmed"}
+        if payload.keys() - allowed:
+            raise ValueError("Run settings contain unsupported fields.")
+
+        defaults = self.server.run_options
+        values: dict[str, int | str | bool] = {
+            "n": payload.get("n", defaults["n"]),
+            "k": payload.get("k", defaults["k"]),
+            "shots": payload.get("shots", defaults["shots"]),
+            "steps": payload.get("steps", defaults["steps"]),
+            "reps": payload.get("reps", defaults["reps"]),
+            "backend": payload.get("backend", defaults["backend"]),
+            "confirmed": payload.get("confirmed", False),
+        }
+        metadata_path = DATA_DIR / "metadata.csv"
+        if not metadata_path.is_file():
+            raise ValueError("Dataset is missing. Start with “python qfhackathon.py demo” first.")
+        with metadata_path.open(newline="", encoding="utf-8") as metadata_file:
+            available_assets = sum(1 for _ in csv.DictReader(metadata_file))
+        integer_limits = {
+            "n": (2, min(15, available_assets)),
+            "shots": (32, 10000),
+            "steps": (1, 100),
+            "reps": (1, 3),
+        }
+        for name, (minimum, maximum) in integer_limits.items():
+            value = values[name]
+            if type(value) is not int or not minimum <= value <= maximum:
+                raise ValueError(f"{name} must be an integer between {minimum} and {maximum}.")
+        if type(values["k"]) is not int or not 1 <= values["k"] <= values["n"] // 2:
+            raise ValueError("k must be an integer between 1 and floor(n/2).")
+        if values["backend"] not in {"emerald", "garnet", "sirius"}:
+            raise ValueError("backend must be emerald, garnet, or sirius.")
+        if type(values["confirmed"]) is not bool:
+            raise ValueError("confirmed must be a boolean.")
+        return values
+
     def log_message(self, format: str, *args) -> None:
         return
 
@@ -191,7 +276,10 @@ def create_server(
     shots: int = 256,
     steps: int = 20,
 ) -> DashboardHTTPServer:
-    run_options = {"n": n, "k": k, "shots": shots, "steps": steps}
+    run_options = {
+        "n": n, "k": k, "shots": shots, "steps": steps, "reps": 1,
+        "backend": "garnet",
+    }
     try:
         return DashboardHTTPServer(("127.0.0.1", port), DashboardHandler, run_options)
     except OSError as error:

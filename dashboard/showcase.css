@@ -4,6 +4,18 @@
 .hero h1{font-size:clamp(42px,5vw,68px)}
 .hero-text{margin:18px 0 22px}
 .hero-actions{gap:16px;flex-wrap:wrap}
+.run-settings{position:relative;max-width:680px;margin-top:18px;border-top:1px solid var(--line)}
+.run-settings summary{display:flex;justify-content:space-between;padding:12px 0;color:var(--ink);font:600 12px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;list-style:none}
+.run-settings summary::-webkit-details-marker{display:none}
+.run-settings[open] summary span{transform:rotate(45deg)}
+.settings-content{padding:4px 0 15px}
+.settings-content>p,.settings-actions>span{color:var(--muted);font-size:11px;line-height:1.5}
+.settings-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.settings-fields label{display:grid;gap:5px;color:var(--muted);font:10px 'DM Mono',monospace;text-transform:uppercase}
+.settings-fields select{width:100%;min-height:36px;padding:0 9px;border:1px solid var(--line);border-radius:0;background:var(--paper);color:var(--ink);font:12px 'Space Grotesk',sans-serif}
+.settings-actions{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}
+.settings-actions .secondary-button{padding:11px 14px;border-radius:0}
+.settings-actions .secondary-button:disabled{cursor:not-allowed}
 .primary-button{min-width:190px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:0;padding:14px 20px;box-shadow:0 8px 20px rgba(24,36,43,.12)}
 .primary-button:hover{transform:translateY(-1px)}
 .primary-button:disabled{opacity:.75;cursor:progress;transform:none}
@@ -20,10 +32,28 @@
 .asset-line:last-child{padding-bottom:0;border-bottom:0}
 .score-card{padding:20px}
 .score-card strong{font-size:clamp(30px,3.3vw,42px);overflow-wrap:anywhere}
+.objective-meter{margin-top:16px}
+.objective-meter>div{display:flex;height:8px;background:#e5e8dd}
+.objective-meter>div i:first-child{background:var(--lime)}
+.objective-meter>div i:last-child{background:#4e7067}
+.objective-meter small{display:flex;justify-content:space-between;gap:8px;margin-top:8px;color:var(--muted);font:9px 'DM Mono',monospace}
+.objective-meter small span{display:grid;gap:3px}
+.objective-meter small span:last-child{text-align:right}
+.objective-meter small b{color:var(--ink);font-size:10px}
 .metrics-grid{grid-template-columns:1.15fr 1fr .85fr;gap:12px;margin-top:12px}
 .metric-panel{min-height:220px;padding:20px}
 .big-number{font-size:clamp(30px,3.4vw,42px);letter-spacing:-.07em}
 .exposure-panel .muted{display:block;max-width:360px;line-height:1.5}
+.carbon-meter{margin-top:18px}
+.carbon-meter-track{position:relative;height:9px;background:#e7e9df}
+.carbon-meter-track>i{position:absolute;top:0;bottom:0;width:50%;background:#e7e9df}
+.carbon-meter-track>i:first-child{left:0;background:rgba(217,119,95,.2)}
+.carbon-meter-track>i:last-child{right:0;background:rgba(116,158,80,.2)}
+.carbon-meter-track>b{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--ink)}
+.carbon-meter-track>#carbonMeterFill{position:absolute;top:0;bottom:0;width:0;background:var(--coral)}
+.carbon-meter-track>#carbonMeterFill.positive{background:#749e50}
+.carbon-meter-labels{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font:8px 'DM Mono',monospace}
+.carbon-meter>small{display:block;margin-top:8px;color:var(--muted);font:9px 'DM Mono',monospace}
 .bar-rows b i{width:0}
 .bar-rows b.pale i{width:100%}
 .bar-rows{margin-top:24px}
@@ -58,6 +88,7 @@ footer{margin-top:26px;padding:18px 0 22px;border-top:1px solid var(--line);disp
   .hero-text{font-size:14px}
   .hero-orbit{display:none}
   .hero-actions{align-items:flex-start;flex-direction:column;gap:12px}
+  .settings-fields{grid-template-columns:1fr 1fr}
   .signal-strip{height:auto;min-height:58px;gap:8px;justify-content:space-between}
   .signal-label{font-size:0;margin:0}
   .signal-label .pulse{font-size:initial;margin:0}

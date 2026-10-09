@@ -310,6 +310,8 @@ def summarize_counts(
     expected_shots=None,
 ):
     measurements = []
+    carbon = u.carbon / np.mean(np.abs(u.carbon))
+    sigma = u.sigma / max(np.max(np.abs(u.sigma)), 1e-12)
     for raw_bits, raw_count in counts.items():
         bitstring = str(raw_bits).replace(" ", "")
         if len(bitstring) != 2 * u.n or set(bitstring) - {"0", "1"}:
@@ -318,6 +320,7 @@ def summarize_counts(
         bits = tuple(int(bit) for bit in ordered)
         values = np.asarray(bits, dtype=int)
         is_feasible = bool(feasible(bits, u.n, k))
+        position = values[:u.n] - values[u.n:]
         measurements.append({
             "bitstring": bitstring,
             "count": float(raw_count),
@@ -326,6 +329,9 @@ def summarize_counts(
             "long": [u.tickers[i] for i in range(u.n) if values[i]],
             "short": [u.tickers[i] for i in range(u.n) if values[u.n + i]],
             "net_carbon": float(u.carbon @ (values[:u.n] - values[u.n:])),
+            "gross_carbon": float(u.carbon @ (values[:u.n] + values[u.n:])),
+            "carbon_component": float((carbon @ position) ** 2),
+            "risk_component": float(position @ sigma @ position),
         })
     total = sum(item["count"] for item in measurements)
     if total <= 0:
@@ -578,12 +584,15 @@ def run_resonance(args):
     for index in range(args.k):
         initial.x(index)
         initial.x(universe.n + index)
+    backend_name = getattr(args, "backend", None) or os.environ.get("IQM_BACKEND", "garnet")
+    backend_name = backend_name.lower()
+    if backend_name not in {"emerald", "garnet", "sirius"}:
+        raise ValueError("IQM backend must be one of: emerald, garnet, sirius")
     provider = IQMProvider(
         os.environ.get("IQM_URL", "https://resonance.iqm.tech"),
-        quantum_computer=os.environ.get("IQM_BACKEND", "garnet"),
+        quantum_computer=backend_name,
         token=os.environ.get("RESONANCE_API_TOKEN") or os.environ.get("IQM_TOKEN"),
     )
-    backend_name = os.environ.get("IQM_BACKEND", "garnet")
     backend = provider.get_backend(backend_name)
     circuit = QAOAAnsatz(cost_operator=cost, mixer_operator=mixer, initial_state=initial, reps=args.reps)
     circuit.measure_all()
@@ -782,12 +791,16 @@ def main():
     add_run_options(local_parser)
     run_parser = sub.add_parser("run", help="compatibility alias for local")
     add_run_options(run_parser)
-    resonance_parser = sub.add_parser("resonance", help="run or dry-run IQM Resonance/Garnet")
+    resonance_parser = sub.add_parser("resonance", help="run or dry-run IQM Resonance")
     resonance_parser.add_argument("--dry-run", action="store_true")
     resonance_parser.add_argument("--shots", type=int, default=1000)
     resonance_parser.add_argument("--reps", type=int, default=1)
     resonance_parser.add_argument("--n", type=int, default=5)
     resonance_parser.add_argument("--k", type=int, default=2)
+    resonance_parser.add_argument(
+        "--backend", choices=("emerald", "garnet", "sirius"),
+        default=os.environ.get("IQM_BACKEND", "garnet").lower(),
+    )
     resonance_parser.add_argument("--yes", action="store_true", help="confirm submission without prompting")
     comparison_parser = sub.add_parser(
         "compare",
