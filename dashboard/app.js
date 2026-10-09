@@ -4,18 +4,20 @@ let orbitCleanupTimer = 0;
 let runMessageTimer = 0;
 let runMessageSwapTimer = 0;
 let activeOrbitClone = null;
+let matrixTimer = 0;
+let runInProgress = false;
 const runMessages = {
   local: [
-    ['Preparing futures data', 'Aligning market history for the selected assets'],
-    ['Building the portfolio objective', 'Combining carbon exposure and covariance risk'],
-    ['Exploring long / short portfolios', 'QAOA simulation is sampling candidate hedges'],
-    ['Checking portfolio constraints', 'Evaluating sampled positions for feasibility'],
+    'Preparing futures data',
+    'Building the portfolio objective',
+    'Exploring long / short portfolios',
+    'Checking portfolio constraints',
   ],
   resonance: [
-    ['Preparing futures data', 'Loading the selected assets and portfolio constraints'],
-    ['Compiling the circuit', 'Preparing the QAOA circuit for the selected IQM backend'],
-    ['Sampling on IQM hardware', 'The remote device is returning measured samples'],
-    ['Decoding the portfolio', 'Checking the returned samples against portfolio rules'],
+    'Preparing futures data',
+    'Compiling the QAOA circuit',
+    'Sampling on IQM hardware',
+    'Decoding the returned samples',
   ],
 };
 
@@ -29,11 +31,12 @@ function renderAssetList(selector, assets, emptyLabel) {
   if (!assets?.length) {
     container.classList.add('is-skeleton');
     container.setAttribute('aria-label', emptyLabel);
-    for (const width of ['82%', '66%', '74%']) {
+    for (const width of ['82%', '66%', '74%', '58%']) {
       const row = document.createElement('span');
-      row.className = 'asset-line skeleton-line';
-      row.style.setProperty('--skeleton-width', width);
+      row.className = 'asset-line matrix-line';
+      row.style.setProperty('--matrix-width', width);
       row.setAttribute('aria-hidden', 'true');
+      row.textContent = '01010110 10100101';
       container.append(row);
     }
     return;
@@ -88,13 +91,18 @@ function render(state) {
   $('#orbitQubits').textContent = `${formatNumber(qubits)} qubits`;
   $('#shots').textContent = shots ? formatNumber(shots) : '—';
   $('#backend').textContent = hardwareRun ? (result.source.match(/IQM\s+([A-Z]+)/)?.[1] || 'IQM') : 'LOCAL QRISP';
-  $('#runButton').disabled = assets <= 0;
-  $('#openResonanceSettings').disabled = assets <= 0;
+  $('#runButton').disabled = runInProgress || assets <= 0;
+  $('#openResonanceSettings').disabled = runInProgress || assets <= 0;
 
   $('#longIndex').textContent = `${formatNumber(state.model?.long_count || 0)} CONTRACTS`;
   $('#shortIndex').textContent = `${formatNumber(state.model?.short_count || 0)} CONTRACTS`;
   renderAssetList('#longAssets', best?.long, 'Long portfolio positions will appear after a run');
   renderAssetList('#shortAssets', best?.short, 'Short portfolio positions will appear after a run');
+  if (best?.long?.length && best?.short?.length) {
+    stopMatrixAnimation();
+  } else {
+    startMatrixAnimation();
+  }
   $('#energyScore').textContent = best?.energy == null ? '—' : Number(best.energy).toFixed(6);
 
   const hasComponents = best?.carbon_component != null && best?.risk_component != null;
@@ -144,6 +152,8 @@ function render(state) {
 }
 
 async function runPortfolio(kind) {
+  if (runInProgress) return;
+  runInProgress = true;
   const localButton = $('#runButton');
   const openSettingsButton = $('#openResonanceSettings');
   const remoteButton = $('#runResonanceButton');
@@ -153,12 +163,13 @@ async function runPortfolio(kind) {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
   });
-  startRunVisual(kind);
   localButton.textContent = kind === 'local' ? 'Running local QAOA…' : 'Run local QAOA';
+  remoteButton.textContent = kind === 'resonance' ? 'Running on Resonance…' : 'Run on Resonance';
   status.textContent = kind === 'local'
     ? 'Your computer is simulating QAOA locally; no quantum hardware is used for this run.'
     : 'Your computer prepares the problem and circuit; IQM runs the quantum sampling.';
   try {
+    startRunVisual(kind);
     const response = await fetch(`/api/run-${kind}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -176,18 +187,36 @@ async function runPortfolio(kind) {
       ? 'Portfolio updated with a new local QAOA run.'
       : 'Portfolio updated with the IQM Resonance result.';
   } catch (error) {
-    status.textContent = error.message;
+    status.textContent = error instanceof Error ? error.message : `The ${kind} run failed.`;
   } finally {
-    stopRunVisual();
-    buttons.forEach((button) => {
-      button.removeAttribute('aria-busy');
-    });
-    localButton.disabled = !datasetAvailable;
-    openSettingsButton.disabled = !datasetAvailable;
-    remoteButton.disabled = false;
-    localButton.textContent = 'Run local QAOA';
-    remoteButton.textContent = 'Run on Resonance';
+    try {
+      stopRunVisual();
+    } finally {
+      runInProgress = false;
+      buttons.forEach((button) => {
+        button.removeAttribute('aria-busy');
+        button.disabled = !datasetAvailable;
+      });
+      localButton.textContent = 'Run local QAOA';
+      remoteButton.textContent = 'Run on Resonance';
+    }
   }
+}
+
+function startMatrixAnimation() {
+  if (matrixTimer) return;
+  const alphabet = '01ABCDEF+-=<>[]{}';
+  matrixTimer = window.setInterval(() => {
+    document.querySelectorAll('.matrix-line').forEach((line) => {
+      const length = Math.max(8, Math.round((Number.parseFloat(line.style.getPropertyValue('--matrix-width')) || 60) / 5));
+      line.textContent = Array.from({ length }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+    });
+  }, 110);
+}
+
+function stopMatrixAnimation() {
+  window.clearInterval(matrixTimer);
+  matrixTimer = 0;
 }
 
 function startRunVisual(kind) {
@@ -242,9 +271,8 @@ function startRunVisual(kind) {
   });
 }
 
-function showRunMessage([title, detail]) {
+function showRunMessage(title) {
   $('#runVisualTitle').textContent = title;
-  $('#runVisualDetail').textContent = detail;
 }
 
 function stopRunVisual() {

@@ -385,7 +385,7 @@ The Antipode dashboard has two separate run actions:
 - **Run local QAOA** runs the Qrisp-based simulation on your computer. It does not use IQM hardware. The local optimizer uses the demo's default settings.
 - **Run on Resonance** opens a settings dialog for futures count, positions per leg, shots, hardware layers, and IQM model. When submitted, the app prepares the problem and circuit on your computer, sends the circuit to the selected IQM backend for quantum sampling, then decodes and displays the returned samples. This is not a locally solved portfolio being sent to IQM. The hardware circuit currently uses fixed initial angles and a Qiskit circuit path that differs from the local Qrisp simulation.
 
-Hardware submission may consume Resonance credits and requires `RESONANCE_API_TOKEN` or `IQM_TOKEN` in the server process environment. While either run is active, the orbital graphic floats to the center as a focused loading state; it is a visual indicator, not live per-stage telemetry.
+Hardware submission may consume Resonance credits and requires `RESONANCE_API_TOKEN` or `IQM_TOKEN` in the server process environment. While either run is active, the orbital graphic floats to the center and cycles through concise stage hints. These animations are visual feedback, not live per-stage telemetry. Run controls are restored after success or failure. Before a result is available, the portfolio cards show animated, unreadable matrix-style placeholder data.
 
 The objective meter shows the carbon and covariance contributions for the selected feasible portfolio; it is not a return or profit score. The carbon meter is signed around a zero-balance marker and scaled to that portfolio's gross financed carbon exposure. Historical saved results made before contribution fields were added show “rerun” until a new solve is run. Local runs invoke Qrisp; remote runs invoke the existing Qiskit/IQM path, whose circuit initialization and fixed angles are not identical to the local Qrisp circuit. A browser run invokes the CLI synchronously with a 1-hour timeout. Repeated and concurrent browser requests are prevented from racing over shared result files.
 
@@ -408,7 +408,7 @@ The API validates portfolio dimensions, shot/layer limits and the IQM backend al
 - **Objective breakdown** — carbon and covariance contribution values and their relative share of the objective.
 - **Net financed carbon** — signed exposure estimate for equal-$1,000 positions; this is not emissions reduction.
 - **Feasible shots** — fraction of QAOA samples satisfying all portfolio constraints.
-- **Experiment profile** — selected asset count, corresponding qubit count, shots and backend.
+- **Profile X** — selected asset count, corresponding qubit count, shots and backend.
 - **Hobby–Rice balance certificate** — numerical continuous-relaxation result and explicit warning that it does not certify discrete optimality.
 
 Detailed timing benchmarks remain in the CLI. Local simulation and IQM hardware are presented as separate run choices.
