@@ -28,23 +28,29 @@
           <p class="hero-text">A small QAOA experiment for long/short energy-futures selection, with a classical reference and an honest continuous-balance certificate.</p>
           <div class="hero-actions">
             <button class="primary-button" id="runButton" type="button" disabled><span class="button-icon" aria-hidden="true">▶</span><span class="button-label">Run local QAOA</span></button>
-            <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading saved portfolio…</span>
+            <button class="primary-button resonance-button" id="runResonanceButton" type="button" disabled><span class="button-icon" aria-hidden="true">⌁</span><span class="button-label">Prepare &amp; run on Resonance</span></button>
+          </div>
+          <span class="run-status" id="runStatus" role="status" aria-live="polite">Loading saved portfolio…</span>
+          <div class="run-activity" id="runActivity" data-mode="idle">
+            <div class="activity-head"><span class="activity-indicator" aria-hidden="true"></span><b id="activityTitle">Ready when you are</b><small id="activityMode">RUN PIPELINE</small></div>
+            <div class="activity-track" aria-hidden="true">
+              <span><i></i>Futures data</span><span><i></i>Build QUBO</span><span><i></i>Run QAOA</span><span><i></i>Decode hedge</span>
+            </div>
+            <small class="activity-note">Workflow animation · not live stage telemetry</small>
           </div>
           <details class="run-settings">
-            <summary>Run settings <span aria-hidden="true">＋</span></summary>
+            <summary>Resonance run settings <span aria-hidden="true">＋</span></summary>
             <div class="settings-content">
-              <p>Choose the portfolio size and sampling profile. Resonance submits a remote job and may use account credits.</p>
+              <p>These settings apply only to the IQM Resonance run. A hardware submission may use account credits.</p>
               <div class="settings-fields">
                 <label>Futures<select id="settingAssets"><option>4</option><option>5</option><option>6</option><option selected>8</option><option>10</option><option>12</option><option>15</option></select></label>
                 <label>Positions per leg<select id="settingK"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></label>
                 <label>Shots<select id="settingShots"><option>128</option><option selected>256</option><option>512</option><option>1000</option></select></label>
-                <label>Local QAOA steps<select id="settingSteps"><option>8</option><option selected>20</option><option>40</option></select></label>
                 <label>Hardware QAOA layers<select id="settingReps"><option selected>1</option><option>2</option><option>3</option></select></label>
                 <label>IQM model<select id="settingBackend"><option value="emerald">Emerald</option><option value="garnet" selected>Garnet</option><option value="sirius">Sirius</option></select></label>
               </div>
               <div class="settings-actions">
-                <button class="secondary-button" id="runResonanceButton" type="button" disabled>Submit to IQM Resonance</button>
-                <span>Remote runs use the hardware path and fixed initial angles; they are not the same circuit as local Qrisp.</span>
+                <span>The hardware run prepares the circuit locally, then samples it on IQM. Its circuit setup differs from local Qrisp.</span>
               </div>
             </div>
           </details>

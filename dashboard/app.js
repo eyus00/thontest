@@ -37,7 +37,6 @@ function selectedSettings() {
     n: Number($('#settingAssets').value),
     k: Number($('#settingK').value),
     shots: Number($('#settingShots').value),
-    steps: Number($('#settingSteps').value),
     reps: Number($('#settingReps').value),
     backend: $('#settingBackend').value,
   };
@@ -120,23 +119,30 @@ async function runPortfolio(kind) {
   const localButton = $('#runButton');
   const remoteButton = $('#runResonanceButton');
   const status = $('#runStatus');
+  const activity = $('#runActivity');
   const buttons = [localButton, remoteButton];
-  const originalLabel = $('.button-label').textContent;
   buttons.forEach((button) => {
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
   });
-  $('.button-label').textContent = kind === 'local' ? 'Optimizing portfolio…' : 'Submitting to Resonance…';
+  activity.dataset.mode = kind;
+  activity.classList.add('is-running');
+  $('#activityTitle').textContent = kind === 'local'
+    ? 'Running the local QAOA simulation'
+    : 'Preparing the circuit for IQM Resonance';
+  $('#activityMode').textContent = kind === 'local' ? 'LOCAL SIMULATION' : 'IQM HARDWARE';
+  localButton.querySelector('.button-label').textContent = kind === 'local' ? 'Running local QAOA…' : 'Run local QAOA';
+  remoteButton.querySelector('.button-label').textContent = kind === 'resonance' ? 'Preparing Resonance run…' : 'Prepare & run on Resonance';
   status.textContent = kind === 'local'
-    ? 'Building the QUBO and running local QAOA. This can take a few minutes.'
-    : 'Compiling and submitting the selected QAOA circuit to IQM Resonance.';
+    ? 'Your computer is simulating QAOA locally; no quantum hardware is used for this run.'
+    : 'Your computer prepares the problem and circuit; IQM runs the quantum sampling.';
   try {
     const response = await fetch(`/api/run-${kind}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...selectedSettings(),
-        confirmed: kind === 'resonance',
+        ...(kind === 'resonance' ? selectedSettings() : {}),
+        ...(kind === 'resonance' ? { confirmed: true } : {}),
       }),
     });
     const payload = await response.json();
@@ -147,24 +153,31 @@ async function runPortfolio(kind) {
     status.textContent = kind === 'local'
       ? 'Portfolio updated with a new local QAOA run.'
       : 'Portfolio updated with the IQM Resonance result.';
+    $('#activityTitle').textContent = 'Portfolio result is ready';
+    $('#activityMode').textContent = 'COMPLETE';
   } catch (error) {
     status.textContent = error.message;
+    $('#activityTitle').textContent = 'Run did not complete';
+    $('#activityMode').textContent = 'CHECK STATUS';
   } finally {
+    activity.classList.remove('is-running');
+    activity.dataset.mode = 'idle';
     buttons.forEach((button) => {
       button.removeAttribute('aria-busy');
     });
     localButton.disabled = !datasetAvailable;
     remoteButton.disabled = !datasetAvailable;
-    $('.button-label').textContent = originalLabel;
+    localButton.querySelector('.button-label').textContent = 'Run local QAOA';
+    remoteButton.querySelector('.button-label').textContent = 'Prepare & run on Resonance';
   }
 }
 
 $('#settingAssets').addEventListener('change', syncPortfolioSettings);
 $('#runButton').addEventListener('click', () => runPortfolio('local'));
 $('#runResonanceButton').addEventListener('click', () => {
-  const { backend, n, k, shots } = selectedSettings();
+  const { backend, n, k, shots, reps } = selectedSettings();
   const confirmed = window.confirm(
-    `Submit ${n} futures, ${k} positions per leg, and ${shots} shots to IQM ${backend.toUpperCase()}? This uses the remote hardware service and may consume account credits.`,
+    `Prepare a circuit for ${n} futures with ${k} positions per leg and ${reps} QAOA layer${reps === 1 ? '' : 's'}, then run ${shots} shots on IQM ${backend.toUpperCase()}? This uses the remote hardware service and may consume account credits.`,
   );
   if (confirmed) runPortfolio('resonance');
 });
