@@ -8,6 +8,7 @@ import errno
 import json
 import subprocess
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,17 +17,28 @@ ROOT = Path(__file__).resolve().parent
 DASHBOARD = ROOT / "dashboard"
 DATA_DIR = ROOT / "data"
 RESULT_PATH = DATA_DIR / "dashboard_result.json"
-COMPARISON_PATH = DATA_DIR / "dashboard_comparison.json"
+DEMO_ASSETS = 8
+DEMO_K = 2
+RUN_LOCK = threading.Lock()
 
 
 class DashboardHTTPServer(ThreadingHTTPServer):
     allow_reuse_address = False
 
+    def __init__(
+        self,
+        server_address,
+        request_handler_class,
+        run_options: dict[str, int],
+    ) -> None:
+        self.run_options = run_options
+        super().__init__(server_address, request_handler_class)
+
 
 def read_json(path: Path, default):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
         return default
 
 
@@ -38,17 +50,27 @@ def state() -> dict:
     else:
         metadata = []
     result = read_json(RESULT_PATH, {})
-    comparison = read_json(COMPARISON_PATH, {})
-    
+
+    best = result.get("best_feasible") or {}
+    bitstring = best.get("bitstring", "")
+    asset_count = (
+        result.get("asset_count")
+        or len(result.get("universe", []))
+        or (len(bitstring) // 2 if bitstring else 0)
+        or min(DEMO_ASSETS, len(metadata))
+    )
     ticker_to_name = {row["ticker"]: row["name"] for row in metadata}
-    
+    selected = result.get("universe") or [
+        row["ticker"] for row in metadata[:asset_count]
+    ]
+    k = result.get("k") or len(best.get("long", [])) or DEMO_K
     asset_details = [
         {"asset": row["name"], "carbon": float(row["carbon"])}
         for row in metadata
+        if row["ticker"] in selected
     ]
     assets = [asset["asset"] for asset in asset_details]
-    
-    # Convert tickers to names in result
+
     def convert_assets(obj):
         if isinstance(obj, dict):
             if "long" in obj and isinstance(obj["long"], list):
@@ -60,40 +82,22 @@ def state() -> dict:
         elif isinstance(obj, list):
             for item in obj:
                 convert_assets(item)
-    
+
     convert_assets(result)
-    
+
     return {
         "model": {
             "assets": assets,
             "data_source": "yahoo",
-            "long_count": 2,
-            "short_count": 2,
+            "long_count": k,
+            "short_count": k,
             "assets_detail": asset_details,
         },
         "result": result,
         "source": result.get("source", "YAHOO / STANDALONE DATASET" if assets else "NO DATASET"),
-        "comparison": comparison,
-        "scaling": [{
-            "asset_count": len(assets),
-            "qubits": len(assets) * 2,
-            "search_space": 2 ** (len(assets) * 2),
-            "feasible_portfolios": (
-                _combination_count(len(assets), 2) *
-                _combination_count(len(assets) - 2, 2)
-            ),
-            "benchmark_kind": "real_base_assets",
-        }],
+        "asset_count": asset_count,
+        "qubit_count": result.get("qubit_count", asset_count * 2),
     }
-
-
-def _combination_count(n: int, k: int) -> int:
-    if k < 0 or k > n:
-        return 0
-    result = 1
-    for value in range(1, k + 1):
-        result = result * (n - value + 1) // value
-    return result
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -128,26 +132,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if endpoint == "/api/run-local":
             command = [
                 sys.executable, str(ROOT / "qfhackathon.py"), "local",
-                "--n", "8", "--k", "2", "--shots", "256", "--steps", "20",
-            ]
-        elif endpoint == "/api/run-resonance":
-            command = [
-                sys.executable, str(ROOT / "qfhackathon.py"), "resonance",
-                "--shots", "1000", "--reps", "1", "--n", "8", "--k", "2",
-            ]
-        elif endpoint == "/api/run-comparison":
-            command = [
-                sys.executable, str(ROOT / "qfhackathon.py"), "compare",
-                "--shots", "1000", "--reps", "1", "--n", "8", "--k", "2",
-                "--yes", "--no-dashboard",
-            ]
-        elif endpoint == "/api/reset-dataset":
-            command = [
-                sys.executable, str(ROOT / "qfhackathon.py"), "reset",
-                "--yes", "--refresh",
+                "--n", str(self.server.run_options["n"]),
+                "--k", str(self.server.run_options["k"]),
+                "--shots", str(self.server.run_options["shots"]),
+                "--steps", str(self.server.run_options["steps"]),
             ]
         else:
             self._send(404, b"Not found", "text/plain; charset=utf-8")
+            return
+
+        if not RUN_LOCK.acquire(blocking=False):
+            self._send(
+                409,
+                json.dumps({"ok": False, "output": "A portfolio run is already in progress."}).encode(),
+                "application/json",
+            )
             return
 
         try:
@@ -158,7 +157,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             output = process.stdout + process.stderr
             payload = {
                 "ok": process.returncode == 0,
-                "output": output,
+                "output": "" if process.returncode == 0 else output[-2500:],
                 "state": state() if process.returncode == 0 else None,
             }
             self._send(
@@ -178,19 +177,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 json.dumps({"ok": False, "output": str(error)}).encode(),
                 "application/json",
             )
+        finally:
+            RUN_LOCK.release()
 
     def log_message(self, format: str, *args) -> None:
         return
 
 
-def create_server(port: int) -> DashboardHTTPServer:
+def create_server(
+    port: int,
+    n: int = DEMO_ASSETS,
+    k: int = DEMO_K,
+    shots: int = 256,
+    steps: int = 20,
+) -> DashboardHTTPServer:
+    run_options = {"n": n, "k": k, "shots": shots, "steps": steps}
     try:
-        return DashboardHTTPServer(("127.0.0.1", port), DashboardHandler)
+        return DashboardHTTPServer(("127.0.0.1", port), DashboardHandler, run_options)
     except OSError as error:
         if error.errno != errno.EADDRINUSE or port == 0:
             raise
         print(f"Port {port} is already in use; selecting an available port.")
-        return DashboardHTTPServer(("127.0.0.1", 0), DashboardHandler)
+        return DashboardHTTPServer(("127.0.0.1", 0), DashboardHandler, run_options)
 
 
 if __name__ == "__main__":

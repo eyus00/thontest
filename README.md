@@ -1,12 +1,11 @@
 # QFHackathon — Carbon-Aware Futures Hedging with QAOA
 
-A self-contained pipeline that downloads energy/commodity futures prices from Yahoo Finance, turns a **carbon-aware long/short portfolio selection** problem into a **QUBO / Ising** model, and solves it three ways:
+A self-contained pipeline that uses historical Yahoo Finance futures data, turns a **carbon-aware long/short portfolio selection** problem into a **QUBO / Ising** model, and solves it classically and with local QAOA:
 
 1. **Exact classical brute force** (the ground-truth reference),
-2. **Local QAOA simulation** with [Qrisp](https://qrisp.eu),
-3. **QAOA on real hardware** (IQM *Garnet*) through [IQM Resonance](https://resonance.iqm.tech).
+2. **Local QAOA simulation** with [Qrisp](https://qrisp.eu).
 
-Results are decoded, saved as JSON, and shown in a local web dashboard ("Quantum Carbon Hedge / Quantum Console") that can also trigger runs from the browser.
+Use `python qfhackathon.py demo` for the guided demo: it checks local data, runs the solver, prints the portfolio summary, and opens the focused presentation dashboard. IQM Resonance remains available as a separate specialist CLI workflow.
 
 ---
 
@@ -55,8 +54,8 @@ An asset can't be both long and short, and each leg must contain **exactly `k`**
                    QUBO matrix Q (2n binary variables)
                     │                 │                  │
                     ▼                 ▼                  ▼
-          exact enumeration     local QAOA (Qrisp)   QAOA on IQM Garnet
-           (classical ref)       (simulator)          (via Resonance)
+          exact enumeration     local QAOA (Qrisp)
+           (classical ref)       (simulator)
                     └────────────────┬─────────────────┘
                                      ▼
                   decoded measurement counts → data/dashboard_result.json
@@ -87,7 +86,7 @@ A bitstring is **feasible** only if exactly `k` long bits are set, exactly `k` s
 │   ├── index.html            # Dashboard markup
 │   ├── app.js                # Fetches /api/state, renders it, wires up the buttons
 │   ├── styles.css            # Main styling (also @imports Google Fonts)
-│   └── comparison.css        # Styling for the timing-comparison panel and buttons
+│   └── showcase.css          # Responsive presentation dashboard refinements
 ├── data/                     # Generated data and results (see section 10)
 │   ├── prices.csv
 │   ├── returns.csv
@@ -111,7 +110,7 @@ Everything is **relative to the folder containing the scripts**. Data is always 
 |---|---|
 | **Python 3.10+** | The bundled `__pycache__` shows the project was developed on Python 3.14. If installing Qrisp / Qiskit / IQM packages fails on a very new Python, try 3.11 or 3.12. |
 | **Internet access** | Needed for the Yahoo download, for pip, for the dashboard's Google Fonts (cosmetic; falls back to system fonts), and for Resonance. Local classical/QAOA runs on already-downloaded data work offline. |
-| **IQM Resonance API token** | *Only* for the `resonance` and `compare` commands, and the dashboard's IQM buttons. |
+| **IQM Resonance API token** | Only for the optional `resonance` and `compare` CLI commands. |
 | **A modern browser** | For the dashboard. |
 
 Python packages (`requirements.txt`):
@@ -155,43 +154,32 @@ Verify the install:
 python qfhackathon.py --help
 ```
 
-You should see the subcommands `download, classical, local, run, resonance, compare, reset`.
+You should see the subcommands `demo, download, classical, local, run, resonance, compare, reset`.
 
 The repo **ships with a sample dataset** (2018-01-03 → 2026-10-09, 15 futures, 2,207 daily returns) in `data/`, so you can run `classical`, `local` and the dashboard immediately without downloading anything.
 
 ---
 
-## 5. Quick start
+## 5. Quick start — demo mode
 
 ```bash
-# (Optional) refresh the dataset from Yahoo Finance
-python qfhackathon.py download --start 2018-01-01
-
-# Exact classical solution for the first 5 assets, 2 long + 2 short
-python qfhackathon.py classical --n 5 --k 2
-
-# Classical reference + local QAOA simulation
-python qfhackathon.py local --n 5 --k 2 --shots 256
-
-# Launch the dashboard
-python dashboard_server.py
-# → open http://127.0.0.1:8765
+python qfhackathon.py demo
 ```
 
-Example output of the `classical` command on the bundled data:
+The guided demo uses the bundled dataset when present. If it is absent, it downloads the default Yahoo Finance window, then runs the exact classical reference and local QAOA before opening the dashboard. The dashboard has one primary action: **Run local QAOA**.
 
-```
-Assets: BZ=F, CL=F, GC=F, HG=F, HO=F
-Classical optimum: long=['HG=F', 'HO=F'] short=['BZ=F', 'GC=F'] net_carbon=-1574.26 energy=0.333569
-```
-
-For real hardware (needs a token, see [section 7](#7-iqm-resonance-setup-and-environment-variables)):
+Options allow a smaller/faster presentation run, or prevent automatic browser launch:
 
 ```bash
-export RESONANCE_API_TOKEN='your-token'
-python qfhackathon.py resonance --dry-run      # builds + transpiles, submits nothing
-python qfhackathon.py resonance --shots 1000   # submits to IQM (consumes credits)
-python qfhackathon.py compare                  # classical timing + IQM run + dashboard
+python qfhackathon.py demo --n 6 --k 2 --shots 128 --steps 8 --no-browser
+```
+
+Use `Ctrl+C` in the terminal to stop the server. No packages are installed automatically when starting the app; dependency setup is a separate one-time environment step.
+
+For a focused CLI-only run, use:
+
+```bash
+python qfhackathon.py local --n 8 --k 2 --shots 256 --steps 20
 ```
 
 ---
@@ -208,9 +196,17 @@ python qfhackathon.py [--verbose] <command> [command options]
 
 | Flag | Description |
 |---|---|
-| `--verbose` | Enables `DEBUG`-level logging. **Must come before the command**, e.g. `python qfhackathon.py --verbose local --n 5`. Default level is `INFO`. Log format: `HH:MM:SS \| LEVEL \| message`. |
+| `--verbose` | Enables detailed debug logging. **Must come before the command**, e.g. `python qfhackathon.py --verbose local --n 5`. Default output is concise. |
 
-Long-running stages (download, enumeration, QAOA, transpilation, hardware job) show an animated terminal spinner (`| / - \`).
+Long-running stages show an animated terminal spinner when attached to an interactive terminal, and simple progress lines when output is piped. The app does not install or update packages automatically.
+
+### `demo` — guided solve and presentation dashboard
+
+```bash
+python qfhackathon.py demo [--n N] [--k K] [--shots S] [--steps T] [--start DATE] [--port P] [--no-browser]
+```
+
+Runs the exact classical reference, local QAOA and numerical Hobby–Rice balance certificate, then serves the dashboard and opens it in a browser. The default demo uses 8 assets, 2 long and 2 short positions, 256 shots and 20 QAOA optimizer steps. If the local dataset is missing, it fetches the default date range before solving. Press `Ctrl+C` to stop the server.
 
 ---
 
@@ -267,7 +263,7 @@ python qfhackathon.py run   ...   # identical alias
 | `--shots` | `256` | Measurement shots for the QAOA simulation. |
 | `--steps` | `10` | Maximum classical-optimiser iterations for QAOA (internally `max(steps, 4)`). |
 
-Runs the exact solver first (as a reference), then QAOA at depth `p = 1` in Qrisp. Writes `data/dashboard_result.json` with the source tag `YAHOO / LOCAL QRISP / <shots> SHOTS`, and prints `Best sampled: …`.
+Runs the exact solver first (as a reference), then QAOA at depth `p = 1` in Qrisp. Writes `data/dashboard_result.json` with the source tag `YAHOO / LOCAL QRISP / <shots> SHOTS`, including the selected universe, asset/qubit counts, and numerical continuous-balance result. Prints the exact reference and best feasible sampled portfolio separately.
 
 ---
 
@@ -290,11 +286,11 @@ Requires `RESONANCE_API_TOKEN` or `IQM_TOKEN`. If no dataset exists locally, it 
 
 ---
 
-### `compare` — full classical-vs-quantum workflow + dashboard
+### `compare` — CLI timing summary with optional IQM run
 
 ```bash
 python qfhackathon.py compare [--start DATE] [--n N] [--k K] [--shots S] [--reps R] \
-                              [--port P] [--yes] [--no-browser]
+                              [--yes] [--dashboard] [--port P] [--no-browser]
 ```
 
 | Flag | Default | Description |
@@ -304,8 +300,9 @@ python qfhackathon.py compare [--start DATE] [--n N] [--k K] [--shots S] [--reps
 | `--k` | `2` | Assets per leg. |
 | `--shots` | `1000` | Shots for the IQM job. |
 | `--reps` | `1` | QAOA depth. |
-| `--port` | `8765` | Dashboard port. If busy, a free port is chosen automatically. |
 | `--yes` | off | Skip the "this may consume credits" confirmation prompt. |
+| `--dashboard` | off | Also open the presentation dashboard after the timing summary. |
+| `--port` | `8765` | Dashboard port, only used with `--dashboard`. |
 | `--no-browser` | off | Don't auto-open the browser. |
 
 Steps:
@@ -315,10 +312,8 @@ Steps:
 3. Run and **time** the exact classical enumeration.
 4. Ask `Submit N shots to IQM garnet? This may consume Resonance credits. [y/N]` (skipped with `--yes`). Answering no (or no TTY / EOF) skips quantum and records classical timing only.
 5. If confirmed, run the Resonance workflow (same as `resonance`).
-6. Write `data/dashboard_comparison.json`.
-7. Start the dashboard and (unless `--no-browser`) open it.
-
-There's also a hidden `--no-dashboard` flag (used internally by the dashboard server) that does steps 1–6 and exits.
+6. Write `data/dashboard_comparison.json` and print build, exact-solve, and (when run) hardware timings. Timings include different methods and are not a speedup comparison.
+7. Start the dashboard only when `--dashboard` is supplied.
 
 ---
 
@@ -376,43 +371,35 @@ Never commit your token. Test connectivity and circuit compatibility for free wi
 
 ## 8. The dashboard
 
+For the full guided presentation, use `python qfhackathon.py demo`. To serve the current saved result without running a solve, use:
+
 ```bash
-python dashboard_server.py          # then open http://127.0.0.1:8765
+python dashboard_server.py
 ```
 
 The server binds only to `127.0.0.1` (local machine), has no authentication, and reads only this folder's `data/`.
 
-### Buttons
-
-| Button | What it does (via POST) |
-|---|---|
-| **Run local QAOA** | `POST /api/run-local` → `qfhackathon.py local --n 8 --k 2 --shots 256 --steps 20` |
-| **Compare + run Resonance** | `POST /api/run-comparison` → `qfhackathon.py compare --shots 1000 --reps 1 --n 8 --k 2 --yes --no-dashboard` (browser confirm dialog first) |
-| **Submit to IQM** | `POST /api/run-resonance` → `qfhackathon.py resonance --shots 1000 --reps 1 --n 8 --k 2` (browser confirm dialog first) |
-| **Reset data** | `POST /api/reset-dataset` → `qfhackathon.py reset --yes --refresh` (clears and re-downloads) |
-| **↻ (refresh)** | Re-fetches `GET /api/state` without running anything |
-
-The dashboard buttons use **fixed parameters** (8 assets, k = 2); change them in `dashboard_server.py` (`do_POST`) if you want different values. Each request runs the CLI synchronously with a 1-hour timeout.
+The presentation dashboard offers one action: **Run local QAOA**. It uses 8 assets, k = 2, 256 shots and 20 optimiser steps; `python qfhackathon.py demo` accepts alternate values. A browser run invokes the CLI synchronously with a 1-hour timeout. Repeated and concurrent browser requests are prevented from racing over shared result files.
 
 ### HTTP API
 
 | Method & path | Returns |
 |---|---|
 | `GET /` and static files | Files from `dashboard/` (`.html`, `.css`, `.js` only get proper content types; path traversal outside `dashboard/` is blocked) |
-| `GET /api/state` | JSON: `model`, `result`, `source`, `comparison`, `scaling` |
-| `POST /api/run-local`, `/api/run-resonance`, `/api/run-comparison`, `/api/reset-dataset` | JSON: `{ok, output, state}`; HTTP 500 on failure, 504 on timeout |
+| `GET /api/state` | JSON: selected-run `model`, `result`, `source`, `asset_count`, `qubit_count` |
+| `POST /api/run-local` | JSON: `{ok, output, state}`; HTTP 500 on failure, 504 on timeout |
 
 `/api/state` converts tickers (e.g. `CL=F`) to human names (e.g. "WTI crude oil") in the results before sending them to the UI.
 
 ### Panels
 
-- **Latest decoded measurement** — long leg, short leg, objective (energy) score, and the source tag.
-- **Classical search vs QUBO/QAOA** — five timings: exact classical solve, QUBO build, IQM compile, Resonance job wait, quantum end-to-end.
-- **Net carbon exposure** — |net carbon| of the best feasible portfolio, in kg CO₂ per equal-$1,000 position.
-- **Feasible probability** — fraction of shots that satisfy all constraints.
-- **Run profile** — qubits, shots, distinct bitstrings, backend.
-- **Universe composition** — carbon intensity of every asset.
-- **Scaling runway** — search-space size and number of feasible portfolios.
+- **Selected portfolio** — sampled long and short legs with the QUBO objective score.
+- **Net financed carbon** — signed exposure estimate for equal-$1,000 positions; this is not emissions reduction.
+- **Feasible shots** — fraction of QAOA samples satisfying all portfolio constraints.
+- **Experiment profile** — selected asset count, corresponding qubit count, shots and backend.
+- **Hobby–Rice balance certificate** — numerical continuous-relaxation result and explicit warning that it does not certify discrete optimality.
+
+Timing benchmarks and hardware submission are kept in specialist CLI workflows, not in the presentation interface.
 
 ---
 
@@ -560,13 +547,12 @@ Number of *feasible* portfolios: `C(n, k) × C(n − k, k)`. For `n = 8, k = 2` 
 | `Download the dataset first or choose at least two futures` | `data/` is empty or `--n < 2`. Run `python qfhackathon.py download`. |
 | `k must be between 1 and floor(n/2)` | Lower `--k` or raise `--n`. |
 | `Yahoo Finance returned no data` / `Fewer than two futures had usable price history` | Network/Yahoo rate limit, or the `--start`/`--end` window is too narrow. Retry or widen the window. |
-| `Set RESONANCE_API_TOKEN or IQM_TOKEN before using resonance` | Export the token in the same shell. For the dashboard, export it **before** launching `dashboard_server.py`. |
+| `Set RESONANCE_API_TOKEN or IQM_TOKEN before using resonance` | Export the token in the same shell before running the optional `resonance` or `compare` CLI command. |
 | Authentication / HTTP errors from Resonance | Wrong/expired token, or wrong `IQM_URL` / `IQM_BACKEND`. |
 | `ModuleNotFoundError: qrisp` (or `iqm`, `qiskit`) | Virtual environment not activated, or `pip install -r requirements.txt` failed. |
 | Package conflicts between Qiskit / IQM / Qrisp | Try Python 3.11 or 3.12 in a fresh venv; pin versions once you find a working set. |
 | `Port 8765 is already in use; selecting an available port.` | Normal — use the URL printed next. Or pass `--port`. |
 | Dashboard shows placeholder values (e.g. "waiting for run") | No result file yet. Click **Run local QAOA** or run `local` from the CLI, then **↻**. |
-| Dashboard "Reset data" fails | Needs internet for the Yahoo re-download. |
 | Dashboard run returns 504 | The subprocess exceeded the 3600 s timeout. |
 | `reset` does nothing in a script/CI | No TTY → the prompt gets EOF → cancelled. Add `--yes`. |
 
@@ -576,17 +562,16 @@ Number of *feasible* portfolios: `C(n, k) × C(n − k, k)`. For `n = 8, k = 2` 
 
 These come from reading the code; they're worth knowing before presenting results.
 
-1. **Asset selection is alphabetical.** `--n` takes the first `n` columns of `returns.csv`. With `--n 5` you get Brent, WTI, Gold, Copper, Heating oil — **not** the five most relevant energy contracts. Reorder columns or add a ticker-selection flag if you want specific assets.
+1. **Asset selection is alphabetical.** `--n` takes the first `n` columns of `returns.csv`. With `--n 5` you get Brent, WTI, Gold, Copper, Heating oil — **not** the five most relevant energy contracts.
 2. **Hardware angles are not optimised.** Every QAOA angle on IQM is fixed at `0.5`. Results are essentially a noisy sample from one untuned circuit.
-3. **`resonance` submits without confirmation.** Only `compare` (and the dashboard's browser confirm dialog) asks first. `resonance --yes` does nothing extra.
-4. **Dashboard qubit/scaling numbers reflect the whole dataset, not the last run.** The UI counts all downloaded assets (15 → "30 qubits", and scaling for `k = 2`), while dashboard runs actually use `n = 8` (16 qubits). The `k = 2` in the model is also hard-coded.
-5. **Some dashboard text is static.** E.g. "exact classical match" under the score, "Long/short symmetry verified", and the initial placeholder numbers in `index.html` are hard-coded, not computed from the run. The exposure bar is scaled against a fixed 20,000 kg.
+3. **`resonance` submits without confirmation.** This specialist command can consume credits; use `--dry-run` to compile without submitting.
+4. **The dashboard is local-only.** It binds to loopback and has no authentication; anyone with access to the local machine may trigger a local QAOA run.
+5. **The QUBO has no expected-return term.** `exp_return` and `vol` in metadata are informational; the current portfolio objective balances estimated financed carbon and covariance risk, not profitability.
 6. **Docstring vs behaviour.** The classical solver is described as "feasible-state enumeration," but it scans **all** `2^(2n)` bitstrings and filters.
-7. **Dashboard run buttons are not mutually exclusive.** The server is threaded with no locking; launching two runs at once can race on the same `data/` files.
-8. **No authentication on the dashboard API.** It's bound to localhost only, but anyone with access to your machine's loopback could trigger Resonance submissions (which use your token).
-9. **`covariance.csv` is not read by the pipeline** (covariance is recomputed from `returns.csv`), and `exp_return`/`vol` in `metadata.csv` aren't used by the QUBO.
-10. **Hard-coded carbon factors.** Emission factors and MMBtu-per-unit values in `FUTURES` are fixed approximations; `kg_co2_per_mmbtu` for metals/agriculture has no effect because their `mmbtu_per_unit` is 0.
-11. **Sample data is a snapshot.** The bundled `data/` files were produced by one run (10 assets, 1,000 shots, Garnet). They show the format, but your own runs overwrite them.
+7. **The dashboard run button uses fixed settings.** The guided `demo` command accepts custom `n`, `k`, `shots` and `steps`.
+8. **`covariance.csv` is not read by the pipeline** (covariance is recomputed from `returns.csv`), and `exp_return`/`vol` in `metadata.csv` aren't used by the QUBO.
+9. **Hard-coded carbon factors.** Emission factors and MMBtu-per-unit values in `FUTURES` are fixed approximations; `kg_co2_per_mmbtu` for metals/agriculture has no effect because their `mmbtu_per_unit` is 0.
+10. **Sample data is a snapshot.** The bundled prices, returns and metadata are historical snapshots; local QAOA runs overwrite the saved dashboard result.
 
 ---
 

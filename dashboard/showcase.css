@@ -1,0 +1,78 @@
+.shell{max-width:1280px;padding:0 32px}
+.topbar{height:76px}
+.hero{min-height:330px;grid-template-columns:minmax(0,1fr) 320px;gap:30px}
+.hero h1{font-size:clamp(42px,5vw,68px)}
+.hero-text{margin:18px 0 22px}
+.hero-actions{gap:16px;flex-wrap:wrap}
+.primary-button{min-width:190px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:4px;padding:14px 20px;box-shadow:0 8px 20px rgba(24,36,43,.12)}
+.primary-button:hover{transform:translateY(-1px)}
+.primary-button:disabled{opacity:.75;cursor:progress;transform:none}
+.button-icon{color:var(--lime);margin:0!important}
+.primary-button[aria-busy=true] .button-icon{width:12px;height:12px;border:2px solid rgba(185,220,75,.35);border-top-color:var(--lime);border-radius:50%;font-size:0;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.run-status{max-width:390px;line-height:1.5;overflow-wrap:anywhere}
+.signal-strip{height:60px}
+.section-heading{margin:48px 0 20px}
+.portfolio-grid{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 240px;gap:12px}
+.portfolio-card{min-height:176px;padding:20px}
+.leg-title{font-size:clamp(18px,2vw,26px);line-height:1.15;overflow-wrap:anywhere}
+.score-card{padding:20px}
+.score-card strong{font-size:clamp(30px,3.3vw,42px);overflow-wrap:anywhere}
+.metrics-grid{grid-template-columns:1.15fr 1fr .85fr;gap:12px;margin-top:12px}
+.metric-panel{min-height:220px;padding:20px}
+.big-number{font-size:clamp(30px,3.4vw,42px);letter-spacing:-.07em}
+.exposure-panel .muted{display:block;max-width:360px;line-height:1.5}
+.bar-rows b i{width:0}
+.bar-rows b.pale i{width:100%}
+.bar-rows{margin-top:24px}
+.lower-grid{display:block;margin-top:12px}
+.method-panel{padding:25px;background:var(--ink);color:var(--paper)}
+.method-panel .kicker,.method-panel p{color:#bdc9c1}
+.method-panel h3{font-size:clamp(20px,2.4vw,27px);margin:0 0 12px;letter-spacing:-.04em}
+.method-panel>p:not(.kicker){max-width:850px;line-height:1.6;font-size:13px}
+.method-note{display:grid;grid-template-columns:34px 1fr;column-gap:12px;align-items:center;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.15)}
+.method-note>span{grid-row:span 2;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--lime);color:var(--ink)}
+.method-note b{font-size:13px}
+.method-note small{margin-top:4px;color:#bdc9c1;font:10px/1.5 'DM Mono',monospace}
+footer{margin-top:26px;padding:18px 0 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:15px;color:var(--muted);font:10px 'DM Mono',monospace}
+@media(max-width:920px){
+  .hero{grid-template-columns:minmax(0,1fr) 230px;min-height:300px}
+  .hero-orbit{transform:scale(.78);transform-origin:center}
+  .portfolio-grid{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr)}
+  .score-card{grid-column:1/-1;min-height:130px}
+  .score-card strong{margin-top:16px}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .run-panel{grid-column:1/-1}
+}
+@media(max-width:620px){
+  .shell{padding:0 17px}
+  .topbar{height:65px}
+  .brand-mark{width:34px;height:34px}
+  .brand strong{font-size:12px}
+  .brand small{font-size:9px}
+  .live-dot{font-size:9px}
+  .hero{display:block;min-height:0;padding:50px 0 34px}
+  .hero h1{font-size:clamp(40px,12vw,58px)}
+  .hero-text{font-size:14px}
+  .hero-orbit{display:none}
+  .hero-actions{align-items:flex-start;flex-direction:column;gap:12px}
+  .signal-strip{height:auto;min-height:58px;gap:8px;justify-content:space-between}
+  .signal-label{font-size:0;margin:0}
+  .signal-label .pulse{font-size:initial;margin:0}
+  .signal-step{font-size:9px;gap:4px}
+  .signal-arrow{font-size:10px}
+  .section-heading{align-items:flex-start;flex-direction:column;gap:8px;margin:35px 0 16px}
+  .section-heading h2{font-size:25px}
+  .portfolio-grid{grid-template-columns:minmax(0,1fr) 16px minmax(0,1fr);gap:7px}
+  .portfolio-card{min-height:158px;padding:13px}
+  .leg-title{font-size:16px;letter-spacing:-.06em}
+  .leg-pill,.leg-index,.leg-foot{font-size:8px}
+  .swap-mark{font-size:16px}
+  .score-card{grid-column:1/-1;min-height:120px}
+  .metrics-grid{grid-template-columns:1fr}
+  .metric-panel,.run-panel{grid-column:auto;min-height:190px}
+  .big-number{margin:20px 0 2px}
+  .method-panel{padding:20px}
+  footer{flex-direction:column;font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

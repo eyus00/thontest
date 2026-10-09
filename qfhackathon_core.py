@@ -19,40 +19,57 @@ import numpy as np
 import pandas as pd
 
 LOGGER = logging.getLogger("qfhackathon")
+DEMO_ASSETS = 8
+DEMO_K = 2
+DEMO_SHOTS = 256
+DEMO_STEPS = 20
 
 
 def configure_logging(verbose=False):
     logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s",
-        datefmt="%H:%M:%S",
+        level=logging.WARNING,
+        format="%(levelname)s  %(message)s",
     )
+    LOGGER.setLevel(logging.DEBUG if verbose else logging.INFO)
 
 
 @contextmanager
 def progress(label):
     """Show a small terminal spinner while a long operation is running."""
+    if not sys.stdout.isatty():
+        LOGGER.info("  %s...", label)
+        try:
+            yield
+        except BaseException:
+            LOGGER.error("  %s failed", label)
+            raise
+        else:
+            LOGGER.info("  %s complete", label)
+        return
+
     running = True
+    succeeded = False
 
     def spin():
         symbols = "|/-\\"
         index = 0
         while running:
-            sys.stdout.write(f"\r{label} {symbols[index % len(symbols)]}")
+            sys.stdout.write(f"\r\033[2K  \033[36m{symbols[index % len(symbols)]}\033[0m {label}")
             sys.stdout.flush()
             index += 1
             time.sleep(0.12)
-        sys.stdout.write(f"\r{label} done\n")
-        sys.stdout.flush()
 
     thread = threading.Thread(target=spin, daemon=True)
-    LOGGER.info("Starting: %s", label)
     thread.start()
     try:
         yield
+        succeeded = True
     finally:
         running = False
         thread.join()
+        color, symbol, outcome = ("32", "✓", "complete") if succeeded else ("31", "×", "failed")
+        sys.stdout.write(f"\r\033[2K  \033[{color}m{symbol}\033[0m {label} {outcome}\n")
+        sys.stdout.flush()
 
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
@@ -311,6 +328,10 @@ def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
     ranked.sort(key=lambda item: (not item["feasible"], item["energy"]))
     feasible_results = [item for item in ranked if item["feasible"]]
     return {
+        "asset_count": u.n,
+        "qubit_count": 2 * u.n,
+        "k": k,
+        "universe": u.tickers,
         "total_shots": int(total) if total.is_integer() else total,
         "distinct_bitstrings": len(ranked),
         "feasible_shots": sum(item["count"] for item in feasible_results),
@@ -323,7 +344,8 @@ def summarize_counts(counts, u, q, constant, k, reverse_bitstrings=False):
 
 def save_dashboard_result(counts, u, q, constant, k, source, reverse_bitstrings=False):
     result = summarize_counts(counts, u, q, constant, k, reverse_bitstrings)
-    result["continuous_balance"] = hobby_rice_balance(u)
+    with progress("Calculating continuous Hobby-Rice balance certificate"):
+        result["continuous_balance"] = hobby_rice_balance(u)
     result["source"] = source
     RESULT_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return result
@@ -384,30 +406,92 @@ def run_qaoa(q, constant, u, k, shots, steps):
             lambda: QuantumArray(QuantumVariable(u.n), shape=(2,)), depth=1, mes_kwargs={"shots": shots}, max_iter=max(steps, 4)
         )
     counts = {key(name): float(count) for name, count in result.items()}
-    save_dashboard_result(
+    saved_result = save_dashboard_result(
         counts, u, q, constant, k, f"YAHOO / LOCAL QRISP / {shots} SHOTS"
     )
     valid = [(energy(tuple(map(int, name)), q, constant), name, count) for name, count in counts.items() if feasible(tuple(map(int, name)), u.n, k)]
-    LOGGER.info("QAOA measured %d states; feasible probability=%.3f", len(counts), sum(item[2] for item in valid))
+    print(
+        f"\n  QAOA sampled {len(counts)} distinct states; "
+        f"{saved_result['feasible_probability']:.1%} of shots were feasible."
+    )
     if valid:
         best = min(valid)
-        print("Best sampled:", describe(tuple(map(int, best[1])), u), f"energy={best[0]:.6f}")
+        print_portfolio("Best feasible QAOA sample", tuple(map(int, best[1])), u, best[0])
+    else:
+        print("  No feasible QAOA sample was measured in this run.")
 
 
 def run_classical(args):
     universe = load(args.n)
     q, constant = build_qubo(universe, args.k)
     best_energy, best_bits = exact(q, constant, universe.n, args.k)
-    LOGGER.info("Assets: %s", ", ".join(universe.tickers))
-    LOGGER.info("Classical optimum: %s energy=%.6f", describe(best_bits, universe), best_energy)
+    print_portfolio("Exact reference", best_bits, universe, best_energy)
+
+
+def print_portfolio(label, bits, universe, score):
+    values = np.asarray(bits, dtype=int)
+    longs = [universe.tickers[i] for i in range(universe.n) if values[i]]
+    shorts = [universe.tickers[i] for i in range(universe.n) if values[universe.n + i]]
+    long_labels = [f"{FUTURES[ticker][0]} [{ticker}]" for ticker in longs]
+    short_labels = [f"{FUTURES[ticker][0]} [{ticker}]" for ticker in shorts]
+    net_carbon = float(universe.carbon @ (values[:universe.n] - values[universe.n:]))
+    print(f"\n  {label}")
+    print(f"  {'LONG':<7}{', '.join(long_labels)}")
+    print(f"  {'SHORT':<7}{', '.join(short_labels)}")
+    print(f"  {'SCORE':<7}{score:.6f}    Net financed carbon: {net_carbon:+,.0f} kg CO₂")
 
 
 def run_local(args):
     universe = load(args.n)
     q, constant = build_qubo(universe, args.k)
+    print("  1 / 2  Finding an exact classical reference")
     best_energy, best_bits = exact(q, constant, universe.n, args.k)
-    LOGGER.info("Classical reference: %s energy=%.6f", describe(best_bits, universe), best_energy)
+    print_portfolio("Exact classical reference", best_bits, universe, best_energy)
+    print("\n  2 / 2  Optimizing and sampling with local QAOA")
     run_qaoa(q, constant, universe, args.k, args.shots, args.steps)
+
+
+def run_demo(args):
+    print("\n  QUANTUM CARBON HEDGE")
+    print("  ─────────────────────────────────────────────")
+    print("  A local QAOA portfolio demo with a classical reference.\n")
+
+    metadata_path = DATA_DIR / "metadata.csv"
+    returns_path = DATA_DIR / "returns.csv"
+    if not metadata_path.is_file() or not returns_path.is_file():
+        print("  01 / MARKET DATA")
+        print("  No local dataset found; downloading the default Yahoo Finance window.")
+        download(args.start)
+    else:
+        print("  01 / MARKET DATA")
+        print("  Bundled local dataset ready.")
+
+    print(
+        f"\n  02 / PORTFOLIO SOLVE · {args.n} assets · "
+        f"{args.k} per leg · {args.shots} shots"
+    )
+    run_local(args)
+
+    from dashboard_server import create_server
+
+    with create_server(
+        args.port,
+        n=args.n,
+        k=args.k,
+        shots=args.shots,
+        steps=args.steps,
+    ) as server:
+        url = f"http://{server.server_address[0]}:{server.server_address[1]}"
+        print("\n  03 / PRESENTATION DASHBOARD")
+        print(f"  {url}")
+        print("  Click “Run local QAOA” to sample another portfolio.")
+        print("  Press Ctrl+C to stop the demo.\n")
+        if not args.no_browser:
+            webbrowser.open(url)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\n  Demo stopped.")
 
 
 def run_resonance(args):
@@ -489,10 +573,22 @@ def run_resonance(args):
     remote_job_seconds = time.perf_counter() - job_started
     output_path = DATA_DIR / "resonance_counts.json"
     output_path.write_text(json.dumps(counts, indent=2) + "\n", encoding="utf-8")
-    save_dashboard_result(
+    saved_result = save_dashboard_result(
         counts, universe, q, constant, args.k,
         f"YAHOO / IQM {backend_name.upper()} / {args.shots} SHOTS",
         reverse_bitstrings=True,
+    )
+    best = saved_result["best_feasible"]
+    if best:
+        print_portfolio(
+            "Best feasible IQM sample",
+            tuple(map(int, best["bitstring"][::-1])),
+            universe,
+            best["energy"],
+        )
+    print(
+        f"  Feasible shots: {saved_result['feasible_probability']:.1%} "
+        f"({saved_result['feasible_shots']:.0f}/{saved_result['total_shots']})"
     )
     LOGGER.info("Saved hardware counts to %s", output_path)
     return {
@@ -529,7 +625,7 @@ def run_comparison(args):
     classical_started = time.perf_counter()
     best_energy, best_bits = exact(q, constant, universe.n, args.k)
     classical_seconds = time.perf_counter() - classical_started
-    LOGGER.info("Classical optimum: %s energy=%.6f", describe(best_bits, universe), best_energy)
+    print_portfolio("Exact classical reference", best_bits, universe, best_energy)
 
     backend = os.environ.get("IQM_BACKEND", "garnet")
     quantum = None
@@ -570,10 +666,25 @@ def run_comparison(args):
     COMPARISON_PATH.write_text(json.dumps(comparison, indent=2) + "\n", encoding="utf-8")
     LOGGER.info("Saved timing comparison to %s", COMPARISON_PATH)
 
-    if not args.no_dashboard:
+    print("\n  RUN TIMINGS")
+    print(f"  QUBO build       {qubo_build_seconds:.3f} s")
+    print(f"  Exact solve      {classical_seconds:.3f} s")
+    print(f"  States checked   {1 << (2 * universe.n):,}")
+    if quantum is not None:
+        print(f"  IQM compile      {quantum['compile_seconds']:.3f} s")
+        print(f"  IQM job + queue  {quantum['remote_job_seconds']:.3f} s")
+        print(f"  IQM end-to-end   {quantum['end_to_end_seconds']:.3f} s")
+    print("  Note: classical, simulated and hardware times are not directly comparable.")
+    if args.dashboard and not args.no_dashboard:
         from dashboard_server import create_server
 
-        with create_server(args.port) as server:
+        with create_server(
+            args.port,
+            n=universe.n,
+            k=args.k,
+            shots=DEMO_SHOTS,
+            steps=DEMO_STEPS,
+        ) as server:
             url = f"http://{server.server_address[0]}:{server.server_address[1]}"
             print(f"Dashboard running at {url}")
             if not args.no_browser:
@@ -615,6 +726,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
+    demo_parser = sub.add_parser(
+        "demo",
+        help="solve a sample portfolio, then open the presentation dashboard",
+    )
+    demo_parser.add_argument("--n", type=int, default=DEMO_ASSETS)
+    demo_parser.add_argument("--k", type=int, default=DEMO_K)
+    demo_parser.add_argument("--shots", type=int, default=DEMO_SHOTS)
+    demo_parser.add_argument("--steps", type=int, default=DEMO_STEPS)
+    demo_parser.add_argument("--start", default="2018-01-01")
+    demo_parser.add_argument("--port", type=int, default=8765)
+    demo_parser.add_argument("--no-browser", action="store_true")
     download_parser = sub.add_parser("download")
     download_parser.add_argument("--start", default="2018-01-01")
     download_parser.add_argument("--end")
@@ -633,7 +755,7 @@ def main():
     resonance_parser.add_argument("--yes", action="store_true", help="confirm submission without prompting")
     comparison_parser = sub.add_parser(
         "compare",
-        help="time exact classical solving, submit QAOA to Resonance, then start the dashboard",
+        help="print solver timings and optionally run QAOA on IQM Resonance",
     )
     comparison_parser.add_argument("--start", default="2018-01-01")
     comparison_parser.add_argument("--n", type=int, default=5)
@@ -641,6 +763,7 @@ def main():
     comparison_parser.add_argument("--shots", type=int, default=1000)
     comparison_parser.add_argument("--reps", type=int, default=1)
     comparison_parser.add_argument("--port", type=int, default=8765)
+    comparison_parser.add_argument("--dashboard", action="store_true", help="open the presentation dashboard after the run")
     comparison_parser.add_argument("--yes", action="store_true", help="confirm submission without prompting")
     comparison_parser.add_argument("--no-dashboard", action="store_true", help=argparse.SUPPRESS)
     comparison_parser.add_argument("--no-browser", action="store_true")
@@ -653,7 +776,9 @@ def main():
     reset_parser.add_argument("--start", default="2018-01-01")
     args = parser.parse_args()
     configure_logging(args.verbose)
-    if args.command == "download":
+    if args.command == "demo":
+        run_demo(args)
+    elif args.command == "download":
         download(args.start, args.end)
     elif args.command == "classical":
         run_classical(args)
