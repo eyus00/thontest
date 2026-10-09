@@ -57,8 +57,21 @@ function renderAssetList(selector, assets, emptyLabel) {
   }
 }
 
-function syncPortfolioSettings() {
-  const assetCount = Number($('#settingAssets').value);
+function syncPortfolioSettings(availableAssets) {
+  const assetSelect = $('#settingAssets');
+  const requestedCount = Number(availableAssets);
+  const availableCount = Number.isFinite(requestedCount)
+    ? requestedCount
+    : Number(assetSelect.dataset.availableAssets || 13);
+  for (const option of assetSelect.options) {
+    option.disabled = Number(option.value) > availableCount;
+  }
+  const validOptions = [...assetSelect.options].filter((option) => !option.disabled);
+  if (validOptions.length && Number(assetSelect.value) > availableCount) {
+    assetSelect.value = validOptions[validOptions.length - 1].value;
+  }
+  assetSelect.dataset.availableAssets = String(availableCount);
+  const assetCount = Number(assetSelect.value);
   const maximumK = Math.floor(assetCount / 2);
   const kSelect = $('#settingK');
   for (const option of kSelect.options) {
@@ -89,6 +102,7 @@ function render(state) {
   const feasible = Number(result.feasible_probability ?? 0);
   const hardwareRun = (result.source || '').includes('IQM');
   datasetAvailable = Boolean(state.dataset_available ?? assets > 0);
+  syncPortfolioSettings(state.available_asset_count);
 
   $('#executionMode').textContent = hardwareRun ? 'IQM HARDWARE RESULT' : 'LOCAL DEMO';
   $('#sourceTag').textContent = result.source || state.source || 'LOCAL PORTFOLIO DEMO';
@@ -185,7 +199,7 @@ async function generateDataset() {
     }
     await requestState();
     $('#runStatus').textContent = datasetAvailable
-      ? `Dataset ready · ${formatNumber(payload.state.asset_count)} futures available. Choose a run method.`
+      ? `Dataset ready · ${formatNumber(payload.state.available_asset_count)} futures available. Choose a run method.`
       : 'Dataset download completed, but the data is incomplete. Please retry.';
   } catch (error) {
     $('#runStatus').textContent = error instanceof Error ? error.message : 'Could not generate the futures dataset.';
@@ -207,6 +221,7 @@ async function runPortfolio(kind) {
   const openSettingsButton = $('#openResonanceSettings');
   const remoteButton = $('#runResonanceButton');
   const status = $('#runStatus');
+  const startedAt = Date.now();
   const buttons = [localButton, openSettingsButton, remoteButton];
   buttons.forEach((button) => {
     button.disabled = true;
@@ -239,6 +254,9 @@ async function runPortfolio(kind) {
     status.textContent = error instanceof Error ? error.message : `The ${kind} run failed.`;
   } finally {
     try {
+      if (kind === 'resonance') {
+        await new Promise((resolve) => window.setTimeout(resolve, Math.max(0, 450 - (Date.now() - startedAt))));
+      }
       stopRunVisual();
     } finally {
       runInProgress = false;

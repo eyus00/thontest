@@ -120,6 +120,7 @@ def state(*, include_saved_result: bool = True) -> dict:
         "result": result,
         "source": result.get("source", "YAHOO / STANDALONE DATASET" if assets else "NO DATASET"),
         "asset_count": asset_count,
+        "available_asset_count": len(metadata) if dataset_available else 0,
         "qubit_count": result.get("qubit_count", asset_count * 2),
         "dataset_available": dataset_available,
     }
