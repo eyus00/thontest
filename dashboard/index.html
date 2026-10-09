@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carbon Hedge / Quantum Console</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/comparison.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Quantum Carbon Hedge home">
+        <span class="brand-mark">QH</span>
+        <span><strong>Quantum Carbon Hedge</strong><small>energy futures / QAOA console</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="live-dot"><i></i> LOCAL CONTROL ROOM</span>
+        <button class="text-button" id="resetButton" title="Clear saved dataset and download a fresh copy">Reset data</button>
+        <button class="icon-button" id="refreshButton" title="Refresh current results" aria-label="Refresh current results">↻</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="kicker">Carbon-aware hedge discovery</p>
+          <h1>Find the hedge<br><em>inside the energy curve.</em></h1>
+          <p class="hero-text">A data-to-quantum workflow balancing estimated emissions, covariance risk, and long/short constraints across energy futures.</p>
+          <div class="hero-actions">
+            <button class="primary-button" id="runButton"><span>▶</span> Run local QAOA</button>
+            <button class="secondary-button" id="compareButton"><span>◷</span> Compare + run Resonance</button>
+            <button class="secondary-button" id="resonanceButton"><span>↗</span> Submit to IQM</button>
+            <span class="run-status" id="runStatus">Ready with local standalone data</span>
+          </div>
+        </div>
+        <div class="hero-orbit" aria-hidden="true">
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="orbit-core"><span>Q</span><small id="orbitQubits">10 qubits</small></div>
+          <b class="orbit-label label-a">YAHOO</b><b class="orbit-label label-b">QUBO</b><b class="orbit-label label-c">IQM</b>
+        </div>
+      </section>
+
+      <section class="signal-strip" aria-label="Pipeline status">
+        <div class="signal-label"><span class="pulse"></span> PIPELINE SIGNAL</div>
+        <div class="signal-step"><b>01</b><span>Market data</span></div><span class="signal-arrow">→</span>
+        <div class="signal-step"><b>02</b><span>QUBO / Ising</span></div><span class="signal-arrow">→</span>
+        <div class="signal-step"><b>03</b><span>QAOA</span></div><span class="signal-arrow">→</span>
+        <div class="signal-step active"><b>04</b><span>Feasible hedge</span></div>
+      </section>
+
+      <section class="section-heading">
+        <div><p class="kicker">Latest decoded measurement</p><h2>The portfolio the machine found.</h2></div>
+        <span class="source-tag" id="sourceTag">IQM GARNET / 1,000 SHOTS</span>
+      </section>
+
+      <section class="portfolio-grid">
+        <article class="portfolio-card long-card">
+          <div class="card-top"><span class="leg-pill">LONG LEG</span><span class="leg-index">01 / 02</span></div>
+          <div class="leg-title" id="longAssets">gasoline<br>natural_gas</div>
+          <div class="leg-foot"><span>Positive exposure</span><span class="green-text" id="longCarbon">—</span></div>
+        </article>
+        <div class="swap-mark" aria-hidden="true">⇄</div>
+        <article class="portfolio-card short-card">
+          <div class="card-top"><span class="leg-pill">SHORT LEG</span><span class="leg-index">02 / 02</span></div>
+          <div class="leg-title" id="shortAssets">wti<br>heating_oil</div>
+          <div class="leg-foot"><span>Negative exposure</span><span class="coral-text" id="shortCarbon">—</span></div>
+        </article>
+        <aside class="score-card">
+          <span class="leg-pill">OBJECTIVE SCORE</span>
+          <strong id="energyScore">1.979479</strong>
+          <div class="score-rule"><span></span></div>
+          <p>Lower is better<br><b>exact classical match</b></p>
+        </aside>
+      </section>
+
+      <section class="performance-panel">
+        <div class="panel-head">
+          <div><p class="kicker">Observed wall-clock timing</p><h3>Classical search vs QUBO / QAOA</h3></div>
+          <span class="muted" id="comparisonStamp">Run a comparison to populate timings</span>
+        </div>
+        <div class="performance-grid">
+          <article><span>Exact classical solve</span><strong id="classicalTime">—</strong><small id="classicalStates">feasible-state enumeration</small></article>
+          <article><span>Build QUBO</span><strong id="quboTime">—</strong><small>same portfolio objective</small></article>
+          <article><span>Compile for IQM</span><strong id="compileTime">—</strong><small>transpile + parameter binding</small></article>
+          <article><span>Resonance job wait</span><strong id="quantumJobTime">—</strong><small>submit + service queue + result</small></article>
+          <article><span>Quantum end-to-end</span><strong id="quantumTotalTime">—</strong><small>model setup through decoded result</small></article>
+        </div>
+        <p class="timing-caveat">These are observed times for different methods, not an apples-to-apples speedup claim. The exact solver enumerates this small instance; Resonance timing includes network and provider queue wait, not just QPU execution. As problem size grows, classical runtime depends on the selected solver and hardware.</p>
+      </section>
+
+      <section class="metrics-grid">
+        <article class="metric-panel exposure-panel">
+          <div class="panel-head"><div><p class="kicker">Environmental signal</p><h3>Net carbon exposure</h3></div><span class="metric-icon">CO₂</span></div>
+          <div class="big-number" id="netCarbon">9,238<span> kg CO₂</span></div>
+          <p class="muted">per equal-$1,000 position convention</p>
+          <div class="exposure-track"><span id="exposureFill"></span><i></i></div>
+          <div class="track-labels"><span>neutral</span><span>current hedge</span><span>gross spread</span></div>
+        </article>
+        <article class="metric-panel validity-panel">
+          <div class="panel-head"><div><p class="kicker">Hardware quality</p><h3>Feasible probability</h3></div><span class="metric-icon check">✓</span></div>
+          <div class="big-number" id="feasibleRate">4.1<span>%</span></div>
+          <p class="muted">shots satisfying all portfolio rules</p>
+          <div class="bar-rows"><div><span>valid states</span><b><i id="validBar"></i></b></div><div><span>other states</span><b class="pale"><i id="otherBar"></i></b></div></div>
+        </article>
+        <article class="metric-panel run-panel">
+          <div class="panel-head"><div><p class="kicker">Quantum configuration</p><h3>Run profile</h3></div><span class="metric-icon">P=1</span></div>
+          <dl><div><dt>Qubits</dt><dd id="qubits">10</dd></div><div><dt>Shots</dt><dd id="shots">—</dd></div><div><dt>Distinct states</dt><dd id="states">—</dd></div><div><dt>Backend</dt><dd class="backend" id="backend">LOCAL</dd></div></dl>
+        </article>
+      </section>
+
+      <section class="lower-grid">
+        <article class="asset-panel">
+          <div class="panel-head"><div><p class="kicker">Universe composition</p><h3 id="assetHeading">Energy exposures</h3></div><span class="muted">kg CO₂ / position</span></div>
+          <div id="assetBars" class="asset-bars"></div>
+        </article>
+        <article class="method-panel">
+          <p class="kicker">Why this result matters</p>
+          <h3>Symmetry narrows the search. The QUBO makes it executable.</h3>
+          <p>The long/short antipode is checked before QAOA. Carbon balance and covariance become one Ising energy landscape, then the hardware samples candidate hedges.</p>
+          <div class="method-note"><span>✓</span><b>Long/short symmetry verified</b><small>long ↔ short swap has equal symmetric energy</small></div>
+        </article>
+      </section>
+
+      <section class="scaling-panel">
+        <div class="panel-head"><div><p class="kicker">Scaling runway</p><h3>When the search starts to stretch</h3></div><span class="muted">real base + stress expansion</span></div>
+        <div class="scaling-table-head"><span>assets</span><span>qubits</span><span>search space</span><span>feasible portfolios</span><span>benchmark</span></div>
+        <div id="scalingRows"></div>
+      </section>
+    </main>
+
+    <footer><span>QFH / standalone presentation console</span><span>data: local Yahoo futures · solver: Qrisp · hardware: IQM Resonance</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+</body>
+</html>

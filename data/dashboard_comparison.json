@@ -1,0 +1,35 @@
+{
+  "completed_at": "2026-10-09T17:01:08.549336+00:00",
+  "asset_count": 10,
+  "qubit_count": 20,
+  "shots": 1000,
+  "classical": {
+    "method": "Exact feasible-state enumeration",
+    "qubo_build_seconds": 0.0007300000288523734,
+    "solve_seconds": 2.509316291019786,
+    "states_considered": 1048576,
+    "best_energy": 0.14180040202700184,
+    "long": [
+      "RB=F",
+      "SI=F",
+      "ZB=F"
+    ],
+    "short": [
+      "GC=F",
+      "HG=F",
+      "HO=F"
+    ]
+  },
+  "quantum": {
+    "backend": "garnet",
+    "qubits": 20,
+    "compile_seconds": 0.2599218329996802,
+    "remote_job_seconds": 3.7313525000354275,
+    "end_to_end_seconds": 8.098529125039931,
+    "method": "QAOA on IQM Resonance",
+    "shots": 1000,
+    "remote_job_includes_queue": true
+  },
+  "backend": "garnet",
+  "timing_note": "The classical figure times exact enumeration only. Quantum compilation is separate; the Resonance job duration includes submission and service/queue wait, not just QPU gate time. These timings use different algorithms and are not an apples-to-apples speedup benchmark."
+}

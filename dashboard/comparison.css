@@ -1,0 +1,16 @@
+.text-button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 10px;font:11px 'DM Mono',monospace;cursor:pointer}
+.text-button:hover{border-color:var(--coral);color:var(--coral)}
+.hero-actions{flex-wrap:wrap}
+.performance-panel{margin-top:15px;padding:22px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+.performance-panel h3{margin:0;font-size:18px}
+.performance-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:22px}
+.performance-grid article{min-width:0;padding:15px;background:#f3f2eb;border-top:3px solid var(--blue)}
+.performance-grid article:first-child{border-color:var(--lime)}
+.performance-grid article:nth-child(4),.performance-grid article:nth-child(5){border-color:var(--coral)}
+.performance-grid span,.performance-grid small{display:block;color:var(--muted);font:10px 'DM Mono',monospace}
+.performance-grid strong{display:block;margin:14px 0 8px;font:500 clamp(18px,2vw,27px) 'DM Mono',monospace;letter-spacing:-.06em;color:var(--ink)}
+.performance-grid small{font-size:9px;line-height:1.5}
+.timing-caveat{margin:17px 0 0;color:var(--muted);font:11px/1.6 'DM Mono',monospace}
+.hero-actions .secondary-button{font-size:12px;padding:14px 13px}
+@media(max-width:900px){.performance-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.performance-panel{padding:15px}.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top-actions{gap:10px}.live-dot{font-size:8px}.text-button{font-size:9px;padding:7px}}
