@@ -1,392 +1,419 @@
 {
+  "asset_count": 13,
+  "qubit_count": 26,
+  "k": 4,
+  "universe": [
+    "BZ=F",
+    "CL=F",
+    "GC=F",
+    "HG=F",
+    "HO=F",
+    "NG=F",
+    "RB=F",
+    "SI=F",
+    "ZC=F",
+    "ZL=F",
+    "ZM=F",
+    "ZS=F",
+    "ZW=F"
+  ],
   "total_shots": 1000,
-  "distinct_bitstrings": 999,
-  "feasible_shots": 14.0,
-  "feasible_probability": 0.014,
+  "distinct_bitstrings": 1000,
+  "feasible_shots": 5.0,
+  "feasible_probability": 0.005,
   "best_feasible": {
-    "bitstring": "00100010010001010100",
+    "bitstring": "00000100110011001100000010",
     "count": 1.0,
-    "energy": 0.7359163881993709,
+    "energy": 3.0053192270825093,
     "feasible": true,
     "long": [
-      "GC=F",
-      "HO=F",
-      "RB=F"
+      "CL=F",
+      "ZC=F",
+      "ZL=F",
+      "ZW=F"
     ],
     "short": [
       "BZ=F",
       "HG=F",
+      "HO=F",
       "SI=F"
     ],
-    "net_carbon": 2500.953946966568,
+    "net_carbon": -3776.476822434429,
+    "gross_carbon": 16050.119351627247,
+    "carbon_component": 1.8452193666379815,
+    "risk_component": 1.160099860444765,
     "probability": 0.001
   },
   "top_feasible": [
     {
-      "bitstring": "00100010010001010100",
+      "bitstring": "00000100110011001100000010",
       "count": 1.0,
-      "energy": 0.7359163881993709,
+      "energy": 3.0053192270825093,
       "feasible": true,
       "long": [
-        "GC=F",
-        "HO=F",
-        "RB=F"
+        "CL=F",
+        "ZC=F",
+        "ZL=F",
+        "ZW=F"
       ],
       "short": [
         "BZ=F",
         "HG=F",
+        "HO=F",
         "SI=F"
       ],
-      "net_carbon": 2500.953946966568,
+      "net_carbon": -3776.476822434429,
+      "gross_carbon": 16050.119351627247,
+      "carbon_component": 1.8452193666379815,
+      "risk_component": 1.160099860444765,
       "probability": 0.001
     },
     {
-      "bitstring": "01010000100000011001",
+      "bitstring": "00110110000000100100000011",
       "count": 1.0,
-      "energy": 0.9200654255557765,
+      "energy": 9.122997875242618,
       "feasible": true,
       "long": [
         "BZ=F",
-        "HG=F",
-        "HO=F"
+        "CL=F",
+        "ZC=F",
+        "ZS=F"
       ],
       "short": [
-        "CL=F",
         "RB=F",
-        "ZB=F"
+        "SI=F",
+        "ZL=F",
+        "ZM=F"
       ],
-      "net_carbon": -298.7660321880294,
+      "net_carbon": 7805.357790666487,
+      "gross_carbon": 15955.803710561791,
+      "carbon_component": 7.882427554451832,
+      "risk_component": 1.240570320790865,
       "probability": 0.001
     },
     {
-      "bitstring": "01101000000001000011",
+      "bitstring": "10010101000000110100000001",
       "count": 1.0,
-      "energy": 2.3928183172997706,
+      "energy": 14.328631890059796,
       "feasible": true,
       "long": [
         "BZ=F",
-        "CL=F",
-        "RB=F"
+        "ZC=F",
+        "ZM=F",
+        "ZS=F"
       ],
       "short": [
         "NG=F",
         "SI=F",
-        "ZB=F"
+        "ZL=F",
+        "ZW=F"
       ],
-      "net_carbon": -60.28436179504024,
+      "net_carbon": -10272.398244853455,
+      "gross_carbon": 21759.917216888916,
+      "carbon_component": 13.652684455910771,
+      "risk_component": 0.6759474341491228,
       "probability": 0.001
     },
     {
-      "bitstring": "00101010001001000010",
+      "bitstring": "00011000011000110001100000",
       "count": 1.0,
-      "energy": 4.4484100502209,
-      "feasible": true,
-      "long": [
-        "CL=F",
-        "RB=F",
-        "ZC=F"
-      ],
-      "short": [
-        "HG=F",
-        "NG=F",
-        "SI=F"
-      ],
-      "net_carbon": -5804.061808562121,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "01100000100001010001",
-      "count": 1.0,
-      "energy": 5.858002750719379,
-      "feasible": true,
-      "long": [
-        "BZ=F",
-        "HO=F",
-        "RB=F"
-      ],
-      "short": [
-        "CL=F",
-        "SI=F",
-        "ZB=F"
-      ],
-      "net_carbon": 7851.670690866526,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00000110010101100000",
-      "count": 1.0,
-      "energy": 8.49625442749766,
+      "energy": 52.86423970331248,
       "feasible": true,
       "long": [
         "NG=F",
         "RB=F",
-        "ZB=F"
+        "ZM=F",
+        "ZS=F"
       ],
       "short": [
-        "BZ=F",
-        "HG=F",
-        "HO=F"
-      ],
-      "net_carbon": 10178.046202277426,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00001010101001000001",
-      "count": 1.0,
-      "energy": 12.817265370736209,
-      "feasible": true,
-      "long": [
-        "BZ=F",
-        "RB=F",
-        "ZC=F"
-      ],
-      "short": [
-        "CL=F",
-        "HG=F",
-        "NG=F"
-      ],
-      "net_carbon": -12333.96066106345,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00011010000100000101",
-      "count": 1.0,
-      "energy": 16.23944539994477,
-      "feasible": true,
-      "long": [
-        "BZ=F",
         "GC=F",
-        "ZB=F"
-      ],
-      "short": [
         "HG=F",
-        "NG=F",
-        "RB=F"
+        "ZC=F",
+        "ZL=F"
       ],
-      "net_carbon": -14347.559234483799,
+      "net_carbon": 20091.380690818838,
+      "gross_carbon": 20091.380690818838,
+      "carbon_component": 52.22686078360373,
+      "risk_component": 0.637378919708701,
       "probability": 0.001
     },
     {
-      "bitstring": "00101100001001000100",
+      "bitstring": "01010000101000000101100010",
       "count": 1.0,
-      "energy": 20.387799606107137,
+      "energy": 64.45119732869011,
       "feasible": true,
       "long": [
-        "GC=F",
+        "CL=F",
+        "NG=F",
         "RB=F",
         "ZC=F"
       ],
       "short": [
+        "GC=F",
         "HO=F",
-        "NG=F",
-        "SI=F"
+        "ZL=F",
+        "ZS=F"
       ],
-      "net_carbon": -16110.412990402696,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00000100111010001000",
-      "count": 1.0,
-      "energy": 21.739038320193117,
-      "feasible": true,
-      "long": [
-        "HG=F",
-        "SI=F",
-        "ZC=F"
-      ],
-      "short": [
-        "BZ=F",
-        "CL=F",
-        "HO=F"
-      ],
-      "net_carbon": -16050.128628607657,
+      "net_carbon": 22058.66335440214,
+      "gross_carbon": 30397.740556428354,
+      "carbon_component": 62.955364462771996,
+      "risk_component": 1.4958328659180782,
       "probability": 0.001
     }
   ],
   "top_measured": [
     {
-      "bitstring": "10101100100101010100",
-      "count": 2.0,
-      "energy": 326.3393712714777,
+      "bitstring": "00000100110011001100000010",
+      "count": 1.0,
+      "energy": 3.0053192270825093,
+      "feasible": true,
+      "long": [
+        "CL=F",
+        "ZC=F",
+        "ZL=F",
+        "ZW=F"
+      ],
+      "short": [
+        "BZ=F",
+        "HG=F",
+        "HO=F",
+        "SI=F"
+      ],
+      "net_carbon": -3776.476822434429,
+      "gross_carbon": 16050.119351627247,
+      "carbon_component": 1.8452193666379815,
+      "risk_component": 1.160099860444765,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "00110110000000100100000011",
+      "count": 1.0,
+      "energy": 9.122997875242618,
+      "feasible": true,
+      "long": [
+        "BZ=F",
+        "CL=F",
+        "ZC=F",
+        "ZS=F"
+      ],
+      "short": [
+        "RB=F",
+        "SI=F",
+        "ZL=F",
+        "ZM=F"
+      ],
+      "net_carbon": 7805.357790666487,
+      "gross_carbon": 15955.803710561791,
+      "carbon_component": 7.882427554451832,
+      "risk_component": 1.240570320790865,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "10010101000000110100000001",
+      "count": 1.0,
+      "energy": 14.328631890059796,
+      "feasible": true,
+      "long": [
+        "BZ=F",
+        "ZC=F",
+        "ZM=F",
+        "ZS=F"
+      ],
+      "short": [
+        "NG=F",
+        "SI=F",
+        "ZL=F",
+        "ZW=F"
+      ],
+      "net_carbon": -10272.398244853455,
+      "gross_carbon": 21759.917216888916,
+      "carbon_component": 13.652684455910771,
+      "risk_component": 0.6759474341491228,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "00011000011000110001100000",
+      "count": 1.0,
+      "energy": 52.86423970331248,
+      "feasible": true,
+      "long": [
+        "NG=F",
+        "RB=F",
+        "ZM=F",
+        "ZS=F"
+      ],
+      "short": [
+        "GC=F",
+        "HG=F",
+        "ZC=F",
+        "ZL=F"
+      ],
+      "net_carbon": 20091.380690818838,
+      "gross_carbon": 20091.380690818838,
+      "carbon_component": 52.22686078360373,
+      "risk_component": 0.637378919708701,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "01010000101000000101100010",
+      "count": 1.0,
+      "energy": 64.45119732869011,
+      "feasible": true,
+      "long": [
+        "CL=F",
+        "NG=F",
+        "RB=F",
+        "ZC=F"
+      ],
+      "short": [
+        "GC=F",
+        "HO=F",
+        "ZL=F",
+        "ZS=F"
+      ],
+      "net_carbon": 22058.66335440214,
+      "gross_carbon": 30397.740556428354,
+      "carbon_component": 62.955364462771996,
+      "risk_component": 1.4958328659180782,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "00011010000011000010010001",
+      "count": 1.0,
+      "energy": 50.25417705102154,
       "feasible": false,
       "long": [
-        "GC=F",
+        "BZ=F",
         "HO=F",
-        "RB=F",
-        "ZB=F"
-      ],
-      "short": [
-        "CL=F",
-        "HO=F",
-        "NG=F",
         "SI=F",
-        "ZC=F"
-      ],
-      "net_carbon": -18077.73810783053,
-      "probability": 0.002
-    },
-    {
-      "bitstring": "00100010010001010100",
-      "count": 1.0,
-      "energy": 0.7359163881993709,
-      "feasible": true,
-      "long": [
-        "GC=F",
-        "HO=F",
-        "RB=F"
+        "ZW=F"
       ],
       "short": [
         "BZ=F",
+        "RB=F",
+        "ZC=F",
+        "ZL=F"
+      ],
+      "net_carbon": 94.3156410654542,
+      "gross_carbon": 19732.28053299622,
+      "carbon_component": 0.0011509111536151951,
+      "risk_component": 0.2530261398676655,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "10000100100000100101001000",
+      "count": 1.0,
+      "energy": 50.2578143497135,
+      "feasible": false,
+      "long": [
         "HG=F",
+        "RB=F",
+        "ZC=F",
+        "ZS=F"
+      ],
+      "short": [
+        "HO=F",
+        "SI=F",
+        "ZW=F"
+      ],
+      "net_carbon": -94.3156410654542,
+      "gross_carbon": 8244.76156096076,
+      "carbon_component": 0.0011509111536151951,
+      "risk_component": 0.25666343855988905,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "00010010001010000010010010",
+      "count": 1.0,
+      "energy": 50.952171706125,
+      "feasible": false,
+      "long": [
+        "CL=F",
+        "HO=F",
         "SI=F"
       ],
-      "net_carbon": 2500.953946966568,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "01010000100000011001",
-      "count": 1.0,
-      "energy": 0.9200654255557765,
-      "feasible": true,
-      "long": [
-        "BZ=F",
-        "HG=F",
-        "HO=F"
-      ],
       "short": [
-        "CL=F",
+        "BZ=F",
+        "GC=F",
         "RB=F",
-        "ZB=F"
+        "ZL=F"
       ],
-      "net_carbon": -298.7660321880294,
+      "net_carbon": 487.3774196441336,
+      "gross_carbon": 20125.3423115749,
+      "carbon_component": 0.030733014828529682,
+      "risk_component": 0.92143869129637,
       "probability": 0.001
     },
     {
-      "bitstring": "01101000000001000011",
+      "bitstring": "10100000100010001011001010",
       "count": 1.0,
-      "energy": 2.3928183172997706,
-      "feasible": true,
+      "energy": 51.30328893416913,
+      "feasible": false,
       "long": [
-        "BZ=F",
         "CL=F",
-        "RB=F"
-      ],
-      "short": [
-        "NG=F",
+        "HG=F",
+        "RB=F",
         "SI=F",
-        "ZB=F"
-      ],
-      "net_carbon": -60.28436179504024,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00101010001001000010",
-      "count": 1.0,
-      "energy": 4.4484100502209,
-      "feasible": true,
-      "long": [
-        "CL=F",
-        "RB=F",
-        "ZC=F"
+        "ZL=F"
       ],
       "short": [
-        "HG=F",
-        "NG=F",
-        "SI=F"
-      ],
-      "net_carbon": -5804.061808562121,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "01100000100001010001",
-      "count": 1.0,
-      "energy": 5.858002750719379,
-      "feasible": true,
-      "long": [
         "BZ=F",
         "HO=F",
-        "RB=F"
+        "ZM=F",
+        "ZW=F"
+      ],
+      "net_carbon": 298.7461375132252,
+      "gross_carbon": 20125.3423115749,
+      "carbon_component": 0.011547260274326789,
+      "risk_component": 1.2917416738944851,
+      "probability": 0.001
+    },
+    {
+      "bitstring": "00010100000101110001000000",
+      "count": 1.0,
+      "energy": 51.72195552035623,
+      "feasible": false,
+      "long": [
+        "RB=F",
+        "ZM=F",
+        "ZS=F",
+        "ZW=F"
       ],
       "short": [
         "CL=F",
         "SI=F",
-        "ZB=F"
+        "ZL=F"
       ],
-      "net_carbon": 7851.670690866526,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00000110010101100000",
-      "count": 1.0,
-      "energy": 8.49625442749766,
-      "feasible": true,
-      "long": [
-        "NG=F",
-        "RB=F",
-        "ZB=F"
-      ],
-      "short": [
-        "BZ=F",
-        "HG=F",
-        "HO=F"
-      ],
-      "net_carbon": 10178.046202277426,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00001010101001000001",
-      "count": 1.0,
-      "energy": 12.817265370736209,
-      "feasible": true,
-      "long": [
-        "BZ=F",
-        "RB=F",
-        "ZC=F"
-      ],
-      "short": [
-        "CL=F",
-        "HG=F",
-        "NG=F"
-      ],
-      "net_carbon": -12333.96066106345,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00011010000100000101",
-      "count": 1.0,
-      "energy": 16.23944539994477,
-      "feasible": true,
-      "long": [
-        "BZ=F",
-        "GC=F",
-        "ZB=F"
-      ],
-      "short": [
-        "HG=F",
-        "NG=F",
-        "RB=F"
-      ],
-      "net_carbon": -14347.559234483799,
-      "probability": 0.001
-    },
-    {
-      "bitstring": "00101100001001000100",
-      "count": 1.0,
-      "energy": 20.387799606107137,
-      "feasible": true,
-      "long": [
-        "GC=F",
-        "RB=F",
-        "ZC=F"
-      ],
-      "short": [
-        "HO=F",
-        "NG=F",
-        "SI=F"
-      ],
-      "net_carbon": -16110.412990402696,
+      "net_carbon": -2061.5983046487568,
+      "gross_carbon": 10212.044224544063,
+      "carbon_component": 0.5498983970103362,
+      "risk_component": 1.1720571233457064,
       "probability": 0.001
     }
   ],
-  "source": "YAHOO / IQM GARNET / 1000 SHOTS"
+  "continuous_balance": {
+    "method": "Hobby-Rice (Borsuk-Ulam) continuous relaxation",
+    "status": "numerical_balance_found",
+    "theoretical_guarantee": "For these integrable measures, a continuous +/-1 partition exists with at most one switch per measure.",
+    "discrete_limit": "Switches may split an asset interval. The guarantee does not imply an exactly balanced discrete portfolio or an optimal QUBO solution.",
+    "measure_names": [
+      "carbon",
+      "dollar",
+      "energy_sector_beta"
+    ],
+    "switch_count": 3,
+    "switch_positions": [
+      1.3387529224724815,
+      5.614582876810325,
+      10.775829954337784
+    ],
+    "normalized_residuals": {
+      "carbon": 8.881784197001252e-15,
+      "dollar": -3.2862601528904634e-14,
+      "energy_sector_beta": 1.0658141036401503e-14
+    },
+    "max_abs_normalized_residual": 3.2862601528904634e-14,
+    "tolerance": 1e-05
+  },
+  "source": "YAHOO / IQM EMERALD / 1000 SHOTS"
 }
